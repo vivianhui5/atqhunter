@@ -1,0 +1,80 @@
+# ==============================================================================
+# ATQ Hunter - Environment Variables Template
+# ==============================================================================
+# INSTRUCTIONS: 
+# 1. Copy the content below
+# 2. Create a new file named .env.local (with the dot at the beginning)
+# 3. Paste this content into that file
+# 4. Replace all the placeholder values with your actual keys
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1-3. SUPABASE (Database) - Get from https://supabase.com
+# ------------------------------------------------------------------------------
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url_here
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
+
+# ------------------------------------------------------------------------------
+# 4-8. CLOUDFLARE R2 (Image Storage) - Get from Cloudflare Dashboard
+# ------------------------------------------------------------------------------
+CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id_here
+CLOUDFLARE_ACCESS_KEY_ID=your_cloudflare_access_key_id_here
+CLOUDFLARE_SECRET_ACCESS_KEY=your_cloudflare_secret_access_key_here
+CLOUDFLARE_BUCKET_NAME=your_bucket_name_here
+CLOUDFLARE_PUBLIC_URL=your_cloudflare_public_url_here
+
+# ------------------------------------------------------------------------------
+# 9-10. NEXTAUTH (Authentication)
+# ------------------------------------------------------------------------------
+NEXTAUTH_SECRET=your_nextauth_secret_here
+NEXTAUTH_URL=http://localhost:3000
+
+
+# ==============================================================================
+# THE 10 VARIABLES EXPLAINED:
+# ==============================================================================
+#
+# 1. NEXT_PUBLIC_SUPABASE_URL
+#    Where: Supabase → Settings → API → Project URL
+#    Example: https://xyzproject123.supabase.co
+#
+# 2. NEXT_PUBLIC_SUPABASE_ANON_KEY
+#    Where: Supabase → Settings → API → anon public key
+#    Example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOi...
+#
+# 3. SUPABASE_SERVICE_ROLE_KEY
+#    Where: Supabase → Settings → API → service_role key (click reveal)
+#    Example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOi...
+#
+# 4. CLOUDFLARE_ACCOUNT_ID
+#    Where: Look at Cloudflare URL or R2 dashboard
+#    Example: 1234567890abcdef1234567890abcdef
+#
+# 5. CLOUDFLARE_ACCESS_KEY_ID
+#    Where: R2 → Manage R2 API Tokens → Create API Token
+#    Example: a1b2c3d4e5f6g7h8i9j0
+#
+# 6. CLOUDFLARE_SECRET_ACCESS_KEY
+#    Where: R2 → Manage R2 API Tokens → Create API Token (shown once!)
+#    Example: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0
+#
+# 7. CLOUDFLARE_BUCKET_NAME
+#    Where: The name you gave your R2 bucket
+#    Example: atqhunter-images
+#
+# 8. CLOUDFLARE_PUBLIC_URL
+#    Where: R2 → Your Bucket → Settings → Public access
+#    Example: https://pub-a1b2c3d4e5f6.r2.dev
+#
+# 9. NEXTAUTH_SECRET
+#    Where: Generate with: openssl rand -base64 32
+#    Example: Xz9k3L5mN8qR2tV6wY0aB4dF7hJ1nP5sQ8tW1xZ4
+#
+# 10. NEXTAUTH_URL
+#     Where: Your app URL
+#     Development: http://localhost:3000
+#     Production: https://yourdomain.com
+#
+# ==============================================================================
+
