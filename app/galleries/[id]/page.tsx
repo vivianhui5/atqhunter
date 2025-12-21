@@ -5,6 +5,10 @@ import { ArtworkPost, Gallery } from '@/types/database';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
+// Disable caching to show latest artworks
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function getGallery(id: string): Promise<Gallery | null> {
   const { data, error } = await supabase
     .from('galleries')

@@ -3,6 +3,10 @@ import ArtworkGrid from '@/components/ArtworkGrid';
 import Header from '@/components/Header';
 import { ArtworkPost } from '@/types/database';
 
+// Disable caching for this page to show latest posts
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function getArtworks(): Promise<{ pinned: ArtworkPost[]; allArtworks: ArtworkPost[] }> {
   const { data, error } = await supabase
     .from('artwork_posts')

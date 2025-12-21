@@ -4,6 +4,10 @@ import { ArtworkPost } from '@/types/database';
 import { notFound } from 'next/navigation';
 import ArtworkDetail from '@/components/ArtworkDetail';
 
+// Disable caching to show latest artwork data
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function getArtwork(id: string): Promise<ArtworkPost | null> {
   const { data, error } = await supabase
     .from('artwork_posts')

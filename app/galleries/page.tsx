@@ -3,6 +3,10 @@ import Header from '@/components/Header';
 import { Gallery } from '@/types/database';
 import Link from 'next/link';
 
+// Disable caching to show latest galleries
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function getGalleries(): Promise<Gallery[]> {
   const { data, error } = await supabase
     .from('galleries')
