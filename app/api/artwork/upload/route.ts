@@ -3,12 +3,41 @@ import { uploadToCloudflare } from '@/lib/cloudflare';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { rateLimit, getIdentifier } from '@/lib/rateLimit';
+
+// Rate limit: 20 artwork uploads per hour per user
+const ARTWORK_UPLOAD_RATE_LIMIT = {
+  interval: 60 * 60 * 1000, // 1 hour
+  uniqueTokenPerInterval: 1000, // 20 uploads per hour
+};
 
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Rate limiting
+    const identifier = getIdentifier(request);
+    const rateLimitResult = await rateLimit(identifier, ARTWORK_UPLOAD_RATE_LIMIT);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Too many uploads. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': new Date(rateLimitResult.reset).toISOString(),
+            'Retry-After': Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString(),
+          },
+        }
+      );
     }
 
     const formData = await request.formData();
@@ -74,10 +103,16 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       { message: 'Artwork uploaded successfully', artwork: artworkPost },
-      { status: 201 }
+      { 
+        status: 201,
+        headers: {
+          'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+          'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          'X-RateLimit-Reset': new Date(rateLimitResult.reset).toISOString(),
+        },
+      }
     );
   } catch (error) {
-    console.error('Error uploading artwork:', error);
     return NextResponse.json(
       { error: 'Failed to upload artwork' },
       { status: 500 }

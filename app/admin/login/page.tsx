@@ -21,7 +21,7 @@ export default function LoginPage() {
 
           <div className="login-footer">
             <Link href="/" className="back-home-link">
-              ← Back to Home
+              ← Back to Collection
             </Link>
           </div>
         </div>

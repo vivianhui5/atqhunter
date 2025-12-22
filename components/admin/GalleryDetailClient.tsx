@@ -198,7 +198,7 @@ export default function GalleryDetailClient({ galleryId }: GalleryDetailClientPr
         <div style={{ background: '#FFFFFF', border: '1px solid #e7e5e4', borderRadius: '12px', overflow: 'hidden' }}>
           {artworks.length === 0 ? (
             <div className="admin-empty-state">
-              <p>No artworks in this gallery</p>
+              <p>No antiques in this gallery</p>
             </div>
           ) : (
             <div style={{ borderTop: '1px solid #e7e5e4' }}>

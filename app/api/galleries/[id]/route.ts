@@ -17,9 +17,24 @@ export async function PATCH(
     const body = await request.json();
     const { name } = body;
 
+    if (!name || typeof name !== 'string') {
+      return NextResponse.json(
+        { error: 'Gallery name is required' },
+        { status: 400 }
+      );
+    }
+
+    const trimmedName = name.trim();
+    if (trimmedName.length === 0 || trimmedName.length > 200) {
+      return NextResponse.json(
+        { error: 'Gallery name must be between 1 and 200 characters' },
+        { status: 400 }
+      );
+    }
+
     const { error } = await supabaseAdmin
       .from('galleries')
-      .update({ name })
+      .update({ name: trimmedName })
       .eq('id', id);
 
     if (error) {
@@ -28,7 +43,6 @@ export async function PATCH(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating gallery:', error);
     return NextResponse.json(
       { error: 'Failed to update gallery' },
       { status: 500 }
@@ -66,7 +80,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting gallery:', error);
     return NextResponse.json(
       { error: 'Failed to delete gallery' },
       { status: 500 }

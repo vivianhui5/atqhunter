@@ -24,8 +24,6 @@ export async function GET(
       throw error;
     }
 
-    console.log('GET /api/artwork/[id] - Returning images count:', artwork.images?.length);
-
     return NextResponse.json(
       { artwork },
       { 
@@ -37,7 +35,6 @@ export async function GET(
       }
     );
   } catch (error) {
-    console.error('Error fetching artwork:', error);
     return NextResponse.json(
       { error: 'Failed to fetch artwork' },
       { status: 500 }
@@ -85,7 +82,6 @@ export async function PATCH(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating artwork:', error);
     return NextResponse.json(
       { error: 'Failed to update artwork' },
       { status: 500 }
@@ -116,7 +112,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Artwork deleted successfully' });
   } catch (error) {
-    console.error('Error deleting artwork:', error);
     return NextResponse.json(
       { error: 'Failed to delete artwork' },
       { status: 500 }

@@ -8,16 +8,25 @@ export async function POST(request: Request) {
 
     const { name } = await request.json();
 
-    if (!name) {
+    if (!name || typeof name !== 'string') {
       return NextResponse.json(
         { error: 'Gallery name is required' },
         { status: 400 }
       );
     }
 
+    // Validate and sanitize name
+    const trimmedName = name.trim();
+    if (trimmedName.length === 0 || trimmedName.length > 200) {
+      return NextResponse.json(
+        { error: 'Gallery name must be between 1 and 200 characters' },
+        { status: 400 }
+      );
+    }
+
     const { data, error } = await supabaseAdmin
       .from('galleries')
-      .insert([{ name }])
+      .insert([{ name: trimmedName }])
       .select()
       .single();
 
@@ -30,7 +39,6 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating gallery:', error);
     return NextResponse.json(
       { error: 'Failed to create gallery' },
       { status: 500 }
@@ -76,7 +84,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ galleries });
   } catch (error) {
-    console.error('Error fetching galleries:', error);
     return NextResponse.json(
       { error: 'Failed to fetch galleries' },
       { status: 500 }

@@ -12,12 +12,15 @@ export async function POST(
     await requireAuth();
     const { id } = await params;
     const body = await request.json();
-    const { images } = body; // Array of { image_url: string, display_order: number }
+    const { images } = body;
 
-    console.log('POST request - artworkId:', id, 'images:', images);
-
-    if (!images || !Array.isArray(images)) {
+    if (!images || !Array.isArray(images) || images.length === 0) {
       return NextResponse.json({ error: 'Images array required' }, { status: 400 });
+    }
+
+    // Validate image data structure
+    if (!images.every((img: any) => img.image_url && typeof img.display_order === 'number')) {
+      return NextResponse.json({ error: 'Invalid image data' }, { status: 400 });
     }
 
     // Insert new images
@@ -32,20 +35,13 @@ export async function POST(
       )
       .select();
 
-    console.log('Insert result:', { data, error });
-
     if (error) {
-      console.error('Supabase error adding images:', error);
-      return NextResponse.json({ error: 'Failed to add images', details: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to add images' }, { status: 500 });
     }
 
     return NextResponse.json({ images: data });
   } catch (error) {
-    console.error('Exception in POST /api/artwork/[id]/images:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error', 
-      details: error instanceof Error ? error.message : String(error) 
-    }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -77,7 +73,6 @@ export async function PATCH(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in PATCH /api/artwork/[id]/images:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -93,9 +88,7 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const imageId = searchParams.get('imageId');
 
-    console.log('DELETE request - artworkId:', id, 'imageId:', imageId);
-
-    if (!imageId) {
+    if (!imageId || typeof imageId !== 'string') {
       return NextResponse.json({ error: 'Image ID required' }, { status: 400 });
     }
 
@@ -113,27 +106,19 @@ export async function DELETE(
     }
 
     // Delete from database
-    const { data, error } = await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from('artwork_images')
       .delete()
       .eq('id', imageId)
-      .eq('artwork_post_id', id)
-      .select();
-
-    console.log('Delete result:', { data, error });
+      .eq('artwork_post_id', id);
 
     if (error) {
-      console.error('Supabase error deleting image:', error);
-      return NextResponse.json({ error: 'Failed to delete image', details: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to delete image' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, deleted: data });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Exception in DELETE /api/artwork/[id]/images:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error', 
-      details: error instanceof Error ? error.message : String(error) 
-    }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 

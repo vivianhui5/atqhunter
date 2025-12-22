@@ -95,13 +95,13 @@ export default function ManagePostsClient() {
         <SearchBar
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search artworks by title..."
+          placeholder="Search by antique ..."
           className="admin-search"
         />
 
         {filteredArtworks.length === 0 && searchQuery ? (
           <div className="admin-empty-state">
-            <p>No artworks found matching &quot;{searchQuery}&quot;</p>
+            <p>No antiques found matching &quot;{searchQuery}&quot;</p>
           </div>
         ) : (
           <ArtworkGrid

@@ -4,11 +4,13 @@ import { ArtworkPost } from '@/types/database';
 import { useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, Mail } from 'lucide-react';
+import InquiryModal from './InquiryModal';
 
 export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showLightbox, setShowLightbox] = useState(false);
+  const [showInquiry, setShowInquiry] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -182,7 +184,19 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                   <span className="metadata-link" style={{ color: '#78716c', cursor: 'default' }}>--</span>
                 )}
               </div>
-          </div>
+            </div>
+
+            {/* Inquire Button - spans full width */}
+            <button
+              onClick={() => setShowInquiry(true)}
+              className="inquire-button"
+            >
+              <Mail size={20} />
+              Inquire About This Piece
+            </button>
+
+            {/* Separator */}
+            <div className="artwork-separator"></div>
 
             {/* Description below */}
             <div className="artwork-section">
@@ -310,6 +324,13 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
           </div>
         </div>
       )}
+
+      {/* Inquiry Modal */}
+      <InquiryModal
+        isOpen={showInquiry}
+        onClose={() => setShowInquiry(false)}
+        artworkTitle={artwork.title}
+      />
     </div>
   );
 }

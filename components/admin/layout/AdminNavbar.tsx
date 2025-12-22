@@ -28,6 +28,12 @@ export default function AdminNavbar() {
             Manage Posts
           </Link>
           <Link
+            href="/admin/featured"
+            className={`admin-nav-link ${isActive('/admin/featured') ? 'active' : ''}`}
+          >
+            Manage Featured
+          </Link>
+          <Link
             href="/admin/galleries"
             className={`admin-nav-link ${isActive('/admin/galleries') ? 'active' : ''}`}
           >

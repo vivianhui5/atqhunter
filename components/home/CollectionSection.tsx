@@ -32,7 +32,7 @@ export default function CollectionSection({ artworks }: CollectionSectionProps) 
 
       {filteredArtworks.length === 0 && searchQuery ? (
         <div className="empty-grid">
-          <p>No artworks found matching &quot;{searchQuery}&quot;</p>
+          <p>No antiques found matching &quot;{searchQuery}&quot;</p>
         </div>
       ) : (
         <ArtworkGrid artworks={filteredArtworks} small={true} />

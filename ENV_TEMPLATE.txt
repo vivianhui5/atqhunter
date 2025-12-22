@@ -30,9 +30,14 @@ CLOUDFLARE_PUBLIC_URL=your_cloudflare_public_url_here
 NEXTAUTH_SECRET=your_nextauth_secret_here
 NEXTAUTH_URL=http://localhost:3000
 
+# ------------------------------------------------------------------------------
+# 11. RESEND (Email Service) - Get from https://resend.com
+# ------------------------------------------------------------------------------
+RESEND_API_KEY=your_resend_api_key_here
+
 
 # ==============================================================================
-# THE 10 VARIABLES EXPLAINED:
+# THE 11 VARIABLES EXPLAINED:
 # ==============================================================================
 #
 # 1. NEXT_PUBLIC_SUPABASE_URL
@@ -75,6 +80,11 @@ NEXTAUTH_URL=http://localhost:3000
 #     Where: Your app URL
 #     Development: http://localhost:3000
 #     Production: https://yourdomain.com
+#
+# 11. RESEND_API_KEY
+#     Where: https://resend.com/api-keys (free 3,000 emails/month)
+#     Steps: Sign up → API Keys → Create API Key
+#     Example: re_123abc456def789ghi012jkl345mno678
 #
 # ==============================================================================
 

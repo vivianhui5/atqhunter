@@ -10,7 +10,7 @@ export default function ArtworkGrid({ artworks, small = false }: ArtworkGridProp
   if (artworks.length === 0) {
     return (
       <div className="empty-grid">
-        <p>No artworks to display</p>
+        <p>No antiques to display</p>
       </div>
     );
   }
