@@ -234,7 +234,8 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
 
   const convertHeicToJpeg = async (file: File): Promise<Blob> => {
     const heic2any = (await import('heic2any')).default;
-    const convertedBlob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+    // Use quality: 1 for maximum quality / no compression
+    const convertedBlob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 1 });
     return Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
   };
 

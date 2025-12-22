@@ -8,8 +8,8 @@ import { Gallery } from '@/types/database';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-async function getGalleries(): Promise<Gallery[]> {
-  const { data, error } = await supabase
+async function getGalleries() {
+  const { data: galleries, error } = await supabase
     .from('galleries')
     .select('*')
     .order('created_at', { ascending: false });
@@ -19,7 +19,25 @@ async function getGalleries(): Promise<Gallery[]> {
     return [];
   }
 
-  return data as Gallery[];
+  // Fetch preview images for each gallery (first 4 images)
+  const galleriesWithImages = await Promise.all(
+    (galleries || []).map(async (gallery) => {
+      const { data: artworks } = await supabase
+        .from('artwork_posts')
+        .select('images:artwork_images(image_url)')
+        .eq('gallery_id', gallery.id)
+        .limit(4);
+
+      const previewImages = artworks
+        ?.flatMap(a => a.images?.map(img => img.image_url) || [])
+        .filter(Boolean)
+        .slice(0, 4) || [];
+
+      return { ...gallery, previewImages };
+    })
+  );
+
+  return galleriesWithImages;
 }
 
 export default async function GalleriesPage() {

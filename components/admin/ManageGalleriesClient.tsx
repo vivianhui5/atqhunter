@@ -30,7 +30,7 @@ export default function ManageGalleriesClient() {
 
   const fetchGalleries = useCallback(async () => {
     try {
-      const res = await fetch('/api/galleries');
+      const res = await fetch('/api/galleries?includeImages=true');
       const data = await res.json();
       setGalleries(data.galleries || []);
     } catch {

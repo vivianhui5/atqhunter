@@ -98,7 +98,8 @@ export default function UploadArtworkClient() {
 
   const convertHeicToJpeg = async (file: File): Promise<Blob> => {
     const heic2any = (await import('heic2any')).default;
-    const convertedBlob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+    // Use quality: 1 for maximum quality / no compression
+    const convertedBlob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 1 });
     return Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
   };
 
@@ -240,79 +241,79 @@ export default function UploadArtworkClient() {
               {/* Gallery */}
               <div className="admin-form-group">
                 <label htmlFor="gallery" className="admin-form-label">Gallery</label>
-                {showNewGallery ? (
+              {showNewGallery ? (
                   <div>
-                    <input
-                      type="text"
-                      value={newGalleryName}
-                      onChange={(e) => setNewGalleryName(e.target.value)}
-                      placeholder="Gallery name"
-                      autoFocus
+                  <input
+                    type="text"
+                    value={newGalleryName}
+                    onChange={(e) => setNewGalleryName(e.target.value)}
+                    placeholder="Gallery name"
+                    autoFocus
                       className="admin-form-input"
-                    />
+                  />
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-                      <button
-                        type="button"
-                        onClick={handleCreateGallery}
-                        disabled={creatingGallery}
-                        className="admin-primary-button"
-                      >
-                        {creatingGallery ? 'Creating...' : 'Create'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowNewGallery(false);
-                          setNewGalleryName('');
-                        }}
-                        className="admin-secondary-button"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="admin-gallery-selector">
-                    <select
-                      id="gallery"
-                      value={selectedGallery}
-                      onChange={(e) => setSelectedGallery(e.target.value)}
-                      className="admin-form-select"
-                    >
-                      <option value="">No gallery</option>
-                      {galleries.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.name}
-                        </option>
-                      ))}
-                    </select>
                     <button
                       type="button"
-                      onClick={() => setShowNewGallery(true)}
-                      className="admin-add-gallery-button"
-                      title="Create new gallery"
+                      onClick={handleCreateGallery}
+                      disabled={creatingGallery}
+                        className="admin-primary-button"
                     >
-                      <FolderPlus size={20} />
+                      {creatingGallery ? 'Creating...' : 'Create'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowNewGallery(false);
+                        setNewGalleryName('');
+                      }}
+                        className="admin-secondary-button"
+                    >
+                      Cancel
                     </button>
                   </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                  <div className="admin-gallery-selector">
+                  <select
+                      id="gallery"
+                    value={selectedGallery}
+                    onChange={(e) => setSelectedGallery(e.target.value)}
+                      className="admin-form-select"
+                  >
+                    <option value="">No gallery</option>
+                    {galleries.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewGallery(true)}
+                      className="admin-add-gallery-button"
+                      title="Create new gallery"
+                  >
+                      <FolderPlus size={20} />
+                  </button>
+                </div>
+              )}
+            </div>
 
               {/* Price */}
               <div className="admin-form-group">
                 <label htmlFor="price" className="admin-form-label">Price</label>
                 <div className="admin-price-input-wrapper">
                   <span className="admin-price-symbol">$</span>
-                  <input
+                <input
                     id="price"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="0.00"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="0.00"
                     className="admin-form-input"
-                  />
+                />
                 </div>
               </div>
             </div>
@@ -395,23 +396,23 @@ export default function UploadArtworkClient() {
           </div>
 
           {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading || imageFiles.length === 0 || !title.trim()}
+            <button
+              type="submit"
+              disabled={loading || imageFiles.length === 0 || !title.trim()}
             className="admin-submit-button"
-          >
-            {loading ? (
-              <>
+            >
+              {loading ? (
+                <>
                 <Loader2 size={20} className="admin-spinner" />
                 <span>Uploading...</span>
-              </>
-            ) : (
-              <>
+                </>
+              ) : (
+                <>
                 <Upload size={20} />
                 <span>Submit Artwork</span>
-              </>
-            )}
-          </button>
+                </>
+              )}
+            </button>
         </form>
       </div>
     </AdminLayout>

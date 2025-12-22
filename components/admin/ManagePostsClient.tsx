@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import AdminLayout from './layout/AdminLayout';
 import PostsHeader from './posts/PostsHeader';
 import ArtworkGrid from './posts/ArtworkGrid';
+import SearchBar from '@/components/SearchBar';
 import { ArtworkPost } from '@/types/database';
 
 interface Toast {
@@ -14,6 +15,7 @@ interface Toast {
 
 export default function ManagePostsClient() {
   const [artworks, setArtworks] = useState<ArtworkPost[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
@@ -21,6 +23,11 @@ export default function ManagePostsClient() {
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   };
+
+  // Filter artworks by search query
+  const filteredArtworks = artworks.filter((artwork) =>
+    artwork.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const fetchArtworks = useCallback(async () => {
     try {
@@ -84,11 +91,25 @@ export default function ManagePostsClient() {
 
       <div className="admin-page-container">
         <PostsHeader />
-        <ArtworkGrid
-          artworks={artworks}
-          onTogglePin={togglePin}
-          onDelete={deleteArtwork}
+        
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search artworks by title..."
+          className="admin-search"
         />
+
+        {filteredArtworks.length === 0 && searchQuery ? (
+          <div className="admin-empty-state">
+            <p>No artworks found matching &quot;{searchQuery}&quot;</p>
+          </div>
+        ) : (
+          <ArtworkGrid
+            artworks={filteredArtworks}
+            onTogglePin={togglePin}
+            onDelete={deleteArtwork}
+          />
+        )}
         </div>
     </AdminLayout>
   );

@@ -38,16 +38,16 @@ export default function ArtworkCard({ artwork }: ArtworkCardProps) {
         
         <div className="artwork-card-gallery-wrapper">
           <span className="gallery-label">From Gallery:</span>{' '}
-          {artwork.gallery ? (
-            <Link 
-              href={`/galleries/${artwork.gallery.id}`}
+      {artwork.gallery ? (
+        <Link 
+          href={`/galleries/${artwork.gallery.id}`}
               className="artwork-card-gallery-link"
-            >
+        >
               {artwork.gallery.name}
-            </Link>
-          ) : (
+        </Link>
+      ) : (
             <span className="artwork-card-gallery-link" style={{ color: '#78716c', cursor: 'default' }}>--</span>
-          )}
+      )}
         </div>
       </div>
     </div>

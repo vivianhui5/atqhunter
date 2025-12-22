@@ -126,7 +126,8 @@ export default function AdminDashboard() {
   const convertHeicToJpeg = async (file: File): Promise<{ blob: Blob; preview: string }> => {
     try {
       const heic2any = (await import('heic2any')).default;
-      const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+      // Use quality: 1 for maximum quality / no compression
+      const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 1 });
       const blob = Array.isArray(result) ? result[0] : result;
       return { blob, preview: URL.createObjectURL(blob) };
     } catch {

@@ -38,9 +38,12 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const { data, error } = await supabaseAdmin
+    const { searchParams } = new URL(request.url);
+    const includeImages = searchParams.get('includeImages') === 'true';
+
+    const { data: galleries, error } = await supabaseAdmin
       .from('galleries')
       .select('*')
       .order('created_at', { ascending: false });
@@ -49,7 +52,29 @@ export async function GET() {
       throw error;
     }
 
-    return NextResponse.json({ galleries: data });
+    // Optionally fetch preview images
+    if (includeImages && galleries) {
+      const galleriesWithImages = await Promise.all(
+        galleries.map(async (gallery) => {
+          const { data: artworks } = await supabaseAdmin
+            .from('artwork_posts')
+            .select('images:artwork_images(image_url)')
+            .eq('gallery_id', gallery.id)
+            .limit(4);
+
+          const previewImages = artworks
+            ?.flatMap(a => a.images?.map(img => img.image_url) || [])
+            .filter(Boolean)
+            .slice(0, 4) || [];
+
+          return { ...gallery, previewImages };
+        })
+      );
+
+      return NextResponse.json({ galleries: galleriesWithImages });
+    }
+
+    return NextResponse.json({ galleries });
   } catch (error) {
     console.error('Error fetching galleries:', error);
     return NextResponse.json(

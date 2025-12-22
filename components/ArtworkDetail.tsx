@@ -1,15 +1,84 @@
 'use client';
 
 import { ArtworkPost } from '@/types/database';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 
 export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showLightbox, setShowLightbox] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const lightboxImageRef = useRef<HTMLDivElement>(null);
   
   const images = artwork.images?.sort((a, b) => a.display_order - b.display_order) || [];
+
+  // Zoom handlers
+  const handleZoomIn = () => {
+    setZoom(prev => Math.min(prev + 0.5, 5));
+  };
+
+  const handleZoomOut = () => {
+    setZoom(prev => {
+      const newZoom = Math.max(prev - 0.5, 1);
+      if (newZoom === 1) {
+        setPosition({ x: 0, y: 0 }); // Reset position when fully zoomed out
+      }
+      return newZoom;
+    });
+  };
+
+  const handleResetZoom = () => {
+    setZoom(1);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  // Mouse wheel zoom
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.2 : 0.2;
+    setZoom(prev => {
+      const newZoom = Math.max(1, Math.min(prev + delta, 5));
+      if (newZoom === 1) {
+        setPosition({ x: 0, y: 0 });
+      }
+      return newZoom;
+    });
+  };
+
+  // Pan/drag handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoom > 1) {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && zoom > 1) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y,
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Double-click to reset
+  const handleDoubleClick = () => {
+    if (zoom > 1) {
+      handleResetZoom();
+    } else {
+      handleZoomIn();
+    }
+  };
 
   return (
     <div className="artwork-detail-page">
@@ -26,7 +95,11 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
             {images.length > 0 && (
               <>
                 <div className="image-container-wrapper">
-                  <div className="main-image" onClick={() => setShowLightbox(true)}>
+                    <div className="main-image" onClick={() => {
+                      setShowLightbox(true);
+                      setZoom(1);
+                      setPosition({ x: 0, y: 0 });
+                    }}>
                     <Image
                       src={images[currentImageIndex].image_url}
                       alt={artwork.title}
@@ -34,7 +107,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                       className="image"
                       sizes="(max-width: 1024px) 100vw, 60vw"
                     />
-                  </div>
+                    </div>
                   
                   {/* Carousel Arrows - Always show */}
                   <button
@@ -64,7 +137,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                     ›
                   </button>
                 </div>
-                
+
                 {/* Thumbnails - Always show */}
                 <div className="thumbnails">
                   {images.map((img, i) => (
@@ -78,14 +151,14 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                     </button>
                   ))}
                 </div>
-              </>
-            )}
-          </div>
+            </>
+          )}
+        </div>
 
           {/* Content */}
           <div className="artwork-content">
             <h1 className="artwork-title">{artwork.title}</h1>
-            
+
             {/* Price and Gallery on same row */}
             <div className="metadata-row">
               <div className="metadata-item">
@@ -109,7 +182,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                   <span className="metadata-link" style={{ color: '#78716c', cursor: 'default' }}>--</span>
                 )}
               </div>
-            </div>
+          </div>
 
             {/* Description below */}
             <div className="artwork-section">
@@ -124,22 +197,117 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                   No description available
                 </div>
               )}
-            </div>
+              </div>
             </div>
         </div>
       </div>
 
-      {/* Lightbox */}
+      {/* Lightbox with Zoom */}
       {showLightbox && (
-        <div className="lightbox" onClick={() => setShowLightbox(false)}>
-          <button className="lightbox-close">×</button>
+        <div 
+          className="lightbox" 
+          onClick={(e) => {
+            // Only close if clicking the background, not the image or controls
+            if (e.target === e.currentTarget) {
+              setShowLightbox(false);
+            }
+          }}
+        >
+          <button 
+            className="lightbox-close" 
+            onClick={() => setShowLightbox(false)}
+            aria-label="Close lightbox"
+          >
+            ×
+          </button>
+
+          {/* Zoom Controls */}
+          <div className="lightbox-zoom-controls">
+            <button 
+              onClick={handleZoomIn}
+              disabled={zoom >= 5}
+              className="lightbox-zoom-button"
+              title="Zoom in"
+              aria-label="Zoom in"
+            >
+              <ZoomIn size={20} />
+            </button>
+            <span className="lightbox-zoom-level">{Math.round(zoom * 100)}%</span>
+            <button 
+              onClick={handleZoomOut}
+              disabled={zoom <= 1}
+              className="lightbox-zoom-button"
+              title="Zoom out"
+              aria-label="Zoom out"
+            >
+              <ZoomOut size={20} />
+            </button>
+            <button 
+              onClick={handleResetZoom}
+              disabled={zoom === 1}
+              className="lightbox-zoom-button"
+              title="Reset zoom"
+              aria-label="Reset zoom"
+            >
+              <Maximize2 size={20} />
+            </button>
+          </div>
+
+          {/* Image Navigation Arrows */}
+          {images.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentImageIndex((currentImageIndex - 1 + images.length) % images.length);
+                  setZoom(1);
+                  setPosition({ x: 0, y: 0 });
+                }}
+                className="lightbox-arrow lightbox-arrow-left"
+                aria-label="Previous image"
+              >
+                ‹
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentImageIndex((currentImageIndex + 1) % images.length);
+                  setZoom(1);
+                  setPosition({ x: 0, y: 0 });
+                }}
+                className="lightbox-arrow lightbox-arrow-right"
+                aria-label="Next image"
+              >
+                ›
+              </button>
+            </>
+          )}
+
+          {/* Zoomable Image */}
+          <div
+            ref={lightboxImageRef}
+            className={`lightbox-image-container ${isDragging ? 'dragging' : ''} ${zoom > 1 ? 'zoomed' : ''}`}
+            onWheel={handleWheel}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onDoubleClick={handleDoubleClick}
+            style={{
+              transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
+              cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
+            }}
+          >
             <Image
-            src={images[currentImageIndex].image_url}
-            alt={artwork.title}
+              src={images[currentImageIndex].image_url}
+              alt={artwork.title}
               fill
-            className="lightbox-image"
+              className="lightbox-image"
               sizes="100vw"
+              quality={100}
+              priority
             />
+          </div>
         </div>
       )}
     </div>
