@@ -5,11 +5,11 @@ import { Upload, FolderPlus, X, Plus, Loader2, ArrowLeft } from 'lucide-react';
 import RichTextEditor from '../RichTextEditor';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import AdminLayout from './AdminLayout';
+import AdminLayout from './layout/AdminLayout';
 import { Gallery } from '@/types/database';
-import { Check as CheckIcon, AlertCircle } from 'lucide-react';
 
 interface ImageFile {
+  id: string;
   file: File;
   preview: string;
   isConverting?: boolean;
@@ -104,13 +104,15 @@ export default function UploadArtworkClient() {
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const remaining = 10 - imageFiles.length;
+    const remaining = 24 - imageFiles.length;
     const filesToAdd = files.slice(0, remaining);
 
     for (const file of filesToAdd) {
+      const fileId = `${Date.now()}-${Math.random()}`;
+      
       if (file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')) {
         const tempPreview = URL.createObjectURL(file);
-        setImageFiles((prev) => [...prev, { file, preview: tempPreview, isConverting: true }]);
+        setImageFiles((prev) => [...prev, { id: fileId, file, preview: tempPreview, isConverting: true }]);
 
         try {
           const convertedBlob = await convertHeicToJpeg(file);
@@ -120,26 +122,29 @@ export default function UploadArtworkClient() {
           const preview = URL.createObjectURL(convertedBlob);
 
           setImageFiles((prev) =>
-            prev.map((img) => (img.file === file ? { file: convertedFile, preview, isConverting: false } : img))
+            prev.map((img) => (img.id === fileId ? { ...img, file: convertedFile, preview, isConverting: false } : img))
           );
           URL.revokeObjectURL(tempPreview);
         } catch {
           showToast('Failed to convert HEIC image', 'error');
-          setImageFiles((prev) => prev.filter((img) => img.file !== file));
+          setImageFiles((prev) => prev.filter((img) => img.id !== fileId));
           URL.revokeObjectURL(tempPreview);
         }
       } else {
         const preview = URL.createObjectURL(file);
-        setImageFiles((prev) => [...prev, { file, preview }]);
+        setImageFiles((prev) => [...prev, { id: fileId, file, preview }]);
       }
     }
 
     if (e.target) e.target.value = '';
   };
 
-  const removeImage = (index: number) => {
-    URL.revokeObjectURL(imageFiles[index].preview);
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+  const removeImage = (id: string) => {
+    const imgToRemove = imageFiles.find(img => img.id === id);
+    if (imgToRemove) {
+      URL.revokeObjectURL(imgToRemove.preview);
+    }
+    setImageFiles((prev) => prev.filter((img) => img.id !== id));
   };
 
   const clearAllImages = () => {
@@ -191,173 +196,175 @@ export default function UploadArtworkClient() {
   return (
     <AdminLayout>
       {/* Toast */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-3">
+      <div className="toast-container">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-lg backdrop-blur-sm ${
-              toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
-            }`}
+            className={`toast ${toast.type === 'success' ? 'toast-success' : 'toast-error'}`}
           >
-            {toast.type === 'success' ? <CheckIcon size={20} /> : <AlertCircle size={20} />}
-            <span className="font-medium">{toast.message}</span>
+            {toast.message}
           </div>
         ))}
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-16">
-        <div className="mb-8">
+      <div className="admin-form-page">
+        <div className="admin-form-page-header">
           <button
             onClick={() => router.push('/admin/posts')}
-            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-medium transition mb-4"
+            className="admin-back-link"
           >
-            <ArrowLeft size={20} />
-            Back to Manage Posts
+            <ArrowLeft size={18} />
+            Back 
           </button>
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900">Upload New Artwork</h2>
+          <h1 className="admin-form-page-title">Upload New Artwork</h1>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8 md:space-y-10 lg:space-y-14">
+        <form onSubmit={handleSubmit}>
           {/* Title */}
-          <div>
-            <label className="block text-2xl font-bold text-slate-900 mb-6">TITLE *</label>
+          <div className="admin-form-section">
+            <label htmlFor="title" className="admin-form-label">Title *</label>
             <input
+              id="title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter artwork title"
-              className="w-full px-6 py-6 text-xl bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
+              className="admin-form-input"
+              required
             />
           </div>
 
           {/* Gallery & Price */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Gallery - 2/3 width */}
-            <div className="md:col-span-2">
-              <label className="block text-2xl font-bold text-slate-900 mb-6">GALLERY</label>
-              {showNewGallery ? (
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={newGalleryName}
-                    onChange={(e) => setNewGalleryName(e.target.value)}
-                    placeholder="Gallery name"
-                    autoFocus
-                    className="w-full px-6 py-6 text-xl bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
-                  />
-                  <div className="flex gap-2">
+          <div className="admin-form-section">
+            <div className="admin-form-row two-cols">
+              {/* Gallery */}
+              <div className="admin-form-group">
+                <label htmlFor="gallery" className="admin-form-label">Gallery</label>
+                {showNewGallery ? (
+                  <div>
+                    <input
+                      type="text"
+                      value={newGalleryName}
+                      onChange={(e) => setNewGalleryName(e.target.value)}
+                      placeholder="Gallery name"
+                      autoFocus
+                      className="admin-form-input"
+                    />
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                      <button
+                        type="button"
+                        onClick={handleCreateGallery}
+                        disabled={creatingGallery}
+                        className="admin-primary-button"
+                      >
+                        {creatingGallery ? 'Creating...' : 'Create'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowNewGallery(false);
+                          setNewGalleryName('');
+                        }}
+                        className="admin-secondary-button"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="admin-gallery-selector">
+                    <select
+                      id="gallery"
+                      value={selectedGallery}
+                      onChange={(e) => setSelectedGallery(e.target.value)}
+                      className="admin-form-select"
+                    >
+                      <option value="">No gallery</option>
+                      {galleries.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </select>
                     <button
                       type="button"
-                      onClick={handleCreateGallery}
-                      disabled={creatingGallery}
-                      className="px-6 py-3 bg-blue-600 text-white text-base font-medium rounded-lg hover:bg-blue-700 transition disabled:bg-slate-400"
+                      onClick={() => setShowNewGallery(true)}
+                      className="admin-add-gallery-button"
+                      title="Create new gallery"
                     >
-                      {creatingGallery ? 'Creating...' : 'Create'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowNewGallery(false);
-                        setNewGalleryName('');
-                      }}
-                      className="px-6 py-3 text-slate-600 text-base font-medium hover:bg-slate-100 rounded-lg transition"
-                    >
-                      Cancel
+                      <FolderPlus size={20} />
                     </button>
                   </div>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <select
-                    value={selectedGallery}
-                    onChange={(e) => setSelectedGallery(e.target.value)}
-                    className="flex-1 px-6 py-6 text-xl bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
-                    aria-label="Select gallery"
-                  >
-                    <option value="">No gallery</option>
-                    {galleries.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setShowNewGallery(true)}
-                    className="px-6 py-6 text-blue-600 font-medium hover:bg-blue-50 rounded-xl transition flex items-center gap-2"
-                    aria-label="Create new gallery"
-                  >
-                    <FolderPlus size={24} />
-                  </button>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* Price - 1/3 width */}
-            <div>
-              <label className="block text-2xl font-bold text-slate-900 mb-6">PRICE</label>
-              <div className="relative">
-                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 text-xl font-medium">$</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full pl-14 pr-6 py-6 text-xl bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
-                />
+              {/* Price */}
+              <div className="admin-form-group">
+                <label htmlFor="price" className="admin-form-label">Price</label>
+                <div className="admin-price-input-wrapper">
+                  <span className="admin-price-symbol">$</span>
+                  <input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="0.00"
+                    className="admin-form-input"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
           {/* Images */}
-          <div>
-            <label className="block text-2xl font-bold text-slate-900 mb-6">IMAGES *</label>
+          <div className="admin-image-upload-section">
+            <div className="admin-form-label" style={{ marginBottom: '1rem' }}>Images *</div>
             {imageFiles.length === 0 ? (
-              <label className="block border-2 border-dashed border-slate-300 rounded-2xl p-12 md:p-20 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all bg-slate-50">
-                <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Upload size={32} className="text-blue-600 md:w-10 md:h-10" />
+              <label className="admin-image-upload-area">
+                <div className="admin-image-upload-icon">
+                  <Upload size={40} />
                 </div>
-                <p className="text-lg md:text-xl font-semibold text-slate-700 mb-2">Click to upload images</p>
-                <p className="text-base md:text-lg text-slate-500">Up to 10 images • JPG, PNG, HEIC</p>
-                <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
+                <div className="admin-image-upload-text">Click to upload images</div>
+                <div className="admin-image-upload-hint">Up to 24 images • JPG, PNG, HEIC</div>
+                <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageSelect} style={{ display: 'none' }} />
               </label>
             ) : (
-              <div className="border-2 border-slate-200 rounded-2xl p-8 bg-slate-50">
-                <div className="flex items-center justify-between mb-6">
-                  <span className="text-lg font-semibold text-slate-600">{imageFiles.length} of 10</span>
-                  <button type="button" onClick={clearAllImages} className="text-lg text-red-600 hover:text-red-700 font-semibold">
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#78716c' }}>{imageFiles.length} of 24 images</span>
+                  <button type="button" onClick={clearAllImages} style={{ fontSize: '0.875rem', color: '#DC2626', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
                     Remove all
                   </button>
                 </div>
-                <div className="grid grid-cols-5 gap-4">
+                <div className="admin-image-preview-grid">
                   {imageFiles.map((img, index) => (
-                    <div key={index} className="relative aspect-square bg-slate-200 rounded-xl overflow-hidden group">
+                    <div key={img.id} className="admin-image-preview-item">
                       {img.isConverting ? (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <Loader2 size={28} className="text-slate-400 animate-spin" />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                          <Loader2 size={28} className="admin-spinner" />
                         </div>
                       ) : (
-                        <Image src={img.preview} alt={`${index + 1}`} fill className="object-cover" />
+                        <Image src={img.preview} alt={`${index + 1}`} fill style={{ objectFit: 'cover' }} />
                       )}
                       <button
                         type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-lg transition"
+                        onClick={() => removeImage(img.id)}
+                        className="admin-image-remove-button"
                         aria-label="Remove image"
                       >
-                        <X size={18} className="text-white" />
+                        <X size={16} />
                       </button>
-                      <div className="absolute bottom-2 left-2 bg-black/70 text-white text-sm font-bold px-2 py-1 rounded">
+                      <div style={{ position: 'absolute', bottom: '0.5rem', left: '0.5rem', background: 'rgba(0,0,0,0.7)', color: 'white', fontSize: '0.75rem', fontWeight: 700, padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
                         {index + 1}
                       </div>
                     </div>
                   ))}
-                  {imageFiles.length < 10 && (
-                    <label className="aspect-square border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center cursor-pointer hover:border-slate-400 hover:bg-white transition">
-                      <Plus size={24} className="text-slate-400" />
-                      <input type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" aria-label="Add more images" />
+                  {imageFiles.length < 24 && (
+                    <label style={{ border: '2px dashed #d6d3d1', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', aspectRatio: '1' }}>
+                      <Plus size={24} style={{ color: '#a8a29e' }} />
+                      <input type="file" accept="image/*" multiple onChange={handleImageSelect} style={{ display: 'none' }} aria-label="Add more images" />
                     </label>
                   )}
                 </div>
@@ -366,50 +373,47 @@ export default function UploadArtworkClient() {
           </div>
 
           {/* Description */}
-          <div>
-            <label className="block text-2xl font-bold text-slate-900 mb-6">DESCRIPTION</label>
+          <div className="admin-form-section">
+            <label htmlFor="description" className="admin-form-label">Description</label>
             <RichTextEditor content={description} onChange={setDescription} />
           </div>
 
           {/* Featured */}
-          <div>
-            <label className="block text-2xl font-bold text-slate-900 mb-6">FEATURED</label>
-            <label className="flex items-center gap-5 cursor-pointer p-6 bg-slate-50 rounded-xl hover:bg-slate-100 transition">
+          <div className="admin-form-section">
+            <h3 className="admin-form-label">Featured</h3>
+            <label className="admin-checkbox-wrapper">
               <input
                 type="checkbox"
                 checked={isPinned}
                 onChange={(e) => setIsPinned(e.target.checked)}
-                className="w-6 h-6 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
               />
-              <div>
-                <p className="text-lg font-medium text-slate-900">Pin to homepage</p>
-                <p className="text-base text-slate-500">Featured items appear first</p>
+              <div className="admin-checkbox-label">
+                <p className="admin-checkbox-title">Pin to homepage</p>
+                <p className="admin-checkbox-description">Featured items appear first</p>
               </div>
             </label>
           </div>
 
           {/* Submit */}
-          <div className="pt-8">
-            <button
-              type="submit"
-              disabled={loading || imageFiles.length === 0 || !title.trim()}
-              className="w-full py-6 bg-blue-600 text-white text-xl font-semibold rounded-xl hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-200 transition-all disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={28} className="animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload size={28} />
-                  Submit Artwork
-                </>
-              )}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={loading || imageFiles.length === 0 || !title.trim()}
+            className="admin-submit-button"
+          >
+            {loading ? (
+              <>
+                <Loader2 size={20} className="admin-spinner" />
+                <span>Uploading...</span>
+              </>
+            ) : (
+              <>
+                <Upload size={20} />
+                <span>Submit Artwork</span>
+              </>
+            )}
+          </button>
         </form>
-      </main>
+      </div>
     </AdminLayout>
   );
 }

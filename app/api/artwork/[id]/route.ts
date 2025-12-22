@@ -24,7 +24,18 @@ export async function GET(
       throw error;
     }
 
-    return NextResponse.json({ artwork });
+    console.log('GET /api/artwork/[id] - Returning images count:', artwork.images?.length);
+
+    return NextResponse.json(
+      { artwork },
+      { 
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      }
+    );
   } catch (error) {
     console.error('Error fetching artwork:', error);
     return NextResponse.json(

@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 const s3Client = new S3Client({
   region: 'auto',
@@ -28,5 +28,25 @@ export async function uploadToCloudflare(
   // Return the public URL
   const publicUrl = `${process.env.CLOUDFLARE_PUBLIC_URL}/${key}`;
   return publicUrl;
+}
+
+export async function deleteFromCloudflare(imageUrl: string): Promise<void> {
+  try {
+    // Extract the key from the URL
+    // URL format: https://pub-xxxxx.r2.dev/artwork/123456-filename.jpg
+    const publicUrl = process.env.CLOUDFLARE_PUBLIC_URL!;
+    const key = imageUrl.replace(`${publicUrl}/`, '');
+
+    const command = new DeleteObjectCommand({
+      Bucket: process.env.CLOUDFLARE_BUCKET_NAME!,
+      Key: key,
+    });
+
+    await s3Client.send(command);
+    console.log('Deleted from Cloudflare:', key);
+  } catch (error) {
+    console.error('Error deleting from Cloudflare:', error);
+    // Don't throw - we still want to delete from database even if storage delete fails
+  }
 }
 

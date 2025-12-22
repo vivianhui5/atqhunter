@@ -1,67 +1,55 @@
-'use client';
-
-import { ArtworkPost } from '@/types/database';
-import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
+import Link from 'next/link';
+import { ArtworkPost } from '@/types/database';
 
 interface ArtworkCardProps {
   artwork: ArtworkPost;
-  index?: number;
-  featured?: boolean;
-  small?: boolean;
 }
 
-export default function ArtworkCard({ artwork, index = 0, featured = false, small = false }: ArtworkCardProps) {
-  const [imageError, setImageError] = useState(false);
-  const firstImage = artwork.images?.[0];
+export default function ArtworkCard({ artwork }: ArtworkCardProps) {
+  const firstImage = artwork.images?.sort((a, b) => a.display_order - b.display_order)[0];
 
   return (
-    <Link
-      href={`/artwork/${artwork.id}`}
-      className="artwork-card group block"
-      style={{ animationDelay: `${index * 0.05}s` }}
-    >
-      {/* Square Image Container */}
-      <div className={`relative aspect-square overflow-hidden bg-stone-100 rounded-sm mb-3`}>
-        {firstImage && !imageError ? (
+    <div className="artwork-card">
+      {/* Image - Clickable to artwork detail */}
+      <Link href={`/artwork/${artwork.id}`} className="artwork-card-image-link">
+        {firstImage ? (
+          <div className="artwork-card-image">
           <Image
             src={firstImage.image_url}
             alt={artwork.title}
             fill
-            className="artwork-image object-contain p-2"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            onError={() => setImageError(true)}
+              className="image-content"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
+          </div>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-stone-300 text-xs">No image</span>
+          <div className="artwork-card-image-empty">
+            <span>No Image</span>
           </div>
         )}
+      </Link>
         
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-stone-900/0 group-hover:bg-stone-900/5 transition-colors duration-300 pointer-events-none" />
-      </div>
-
-      {/* Title - Centered */}
-      <h3 className="text-sm font-medium text-stone-800 group-hover:text-stone-600 transition-colors duration-200 line-clamp-2 text-center">
-        {artwork.title}
-      </h3>
-      
-      {/* Gallery Link - Centered */}
-      {artwork.gallery ? (
-        <Link 
-          href={`/galleries/${artwork.gallery.id}`}
-          className="text-xs text-stone-500 hover:text-stone-700 transition-colors mt-1 block text-center"
-          onClick={(e) => e.stopPropagation()}
-        >
-          Gallery: {artwork.gallery.name}
+      {/* Info Section */}
+      <div className="artwork-card-info">
+        <Link href={`/artwork/${artwork.id}`} className="artwork-card-title-link">
+          <h3 className="artwork-card-title">{artwork.title}</h3>
         </Link>
-      ) : (
-        <p className="text-xs text-stone-400 mt-1 text-center">
-          Gallery: --
-        </p>
-      )}
-    </Link>
+        
+        <div className="artwork-card-gallery-wrapper">
+          <span className="gallery-label">From Gallery:</span>{' '}
+          {artwork.gallery ? (
+            <Link 
+              href={`/galleries/${artwork.gallery.id}`}
+              className="artwork-card-gallery-link"
+            >
+              {artwork.gallery.name}
+            </Link>
+          ) : (
+            <span className="artwork-card-gallery-link" style={{ color: '#78716c', cursor: 'default' }}>--</span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

@@ -1,24 +1,29 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Upload, FolderPlus, X, Plus, Check, Loader2, ArrowLeft } from 'lucide-react';
+import { FolderPlus, Check, Loader2, ArrowLeft, X, Plus } from 'lucide-react';
 import RichTextEditor from '../RichTextEditor';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import AdminLayout from './AdminLayout';
+import AdminLayout from './layout/AdminLayout';
 import { Gallery } from '@/types/database';
-import { Check as CheckIcon, AlertCircle } from 'lucide-react';
-
-interface ImageFile {
-  file: File;
-  preview: string;
-  isConverting?: boolean;
-}
 
 interface Toast {
   id: number;
   message: string;
   type: 'success' | 'error';
+}
+
+interface ArtworkImage {
+  id: string;
+  image_url: string;
+  display_order: number;
+}
+
+interface ImageFile {
+  file: File;
+  preview: string;
+  isConverting?: boolean;
 }
 
 interface EditArtworkClientProps {
@@ -32,13 +37,14 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
   const [selectedGallery, setSelectedGallery] = useState('');
   const [isPinned, setIsPinned] = useState(false);
   const [galleries, setGalleries] = useState<Gallery[]>([]);
-  const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [showNewGallery, setShowNewGallery] = useState(false);
   const [newGalleryName, setNewGalleryName] = useState('');
   const [creatingGallery, setCreatingGallery] = useState(false);
   const [isLoadingArtwork, setIsLoadingArtwork] = useState(true);
+  const [existingImages, setExistingImages] = useState<ArtworkImage[]>([]);
+  const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -49,15 +55,16 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
   };
 
   useEffect(() => {
-    fetchGalleries();
-    fetchArtwork();
+    void fetchGalleries();
+    void fetchArtwork();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [artworkId]);
 
   useEffect(() => {
     return () => {
-      imageFiles.forEach((img) => URL.revokeObjectURL(img.preview));
+      newImageFiles.forEach((img) => URL.revokeObjectURL(img.preview));
     };
-  }, [imageFiles]);
+  }, [newImageFiles]);
 
   const fetchGalleries = async () => {
     try {
@@ -71,7 +78,14 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
 
   const fetchArtwork = async () => {
     try {
-      const res = await fetch(`/api/artwork/${artworkId}`);
+      console.log('Fetching artwork data...');
+      const res = await fetch(`/api/artwork/${artworkId}?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       if (!res.ok) {
         showToast('Artwork not found', 'error');
         router.push('/admin/posts');
@@ -79,15 +93,27 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
       }
 
       const data = await res.json();
+      console.log('Fetched artwork data:', data.artwork);
+      console.log('Fetched images:', data.artwork.images);
       setTitle(data.artwork.title);
       setDescription(data.artwork.description || '');
       setPrice(data.artwork.price?.toString() || '');
       setSelectedGallery(data.artwork.gallery_id || '');
       setIsPinned(data.artwork.is_pinned);
       
-      // Note: Existing images are already uploaded, we don't need to populate imageFiles
-      // The user can add new images if they want
-    } catch {
+      // Load existing images
+      if (data.artwork.images) {
+        const sortedImages = data.artwork.images.sort(
+          (a: ArtworkImage, b: ArtworkImage) => a.display_order - b.display_order
+        );
+        console.log('Setting images to state:', sortedImages);
+        setExistingImages(sortedImages);
+      } else {
+        console.log('No images found');
+        setExistingImages([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch artwork:', err);
       showToast('Failed to load artwork', 'error');
       router.push('/admin/posts');
     } finally {
@@ -128,21 +154,101 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
     }
   };
 
+  // Image management functions
+  const deleteExistingImage = async (imageId: string) => {
+    if (!confirm('Delete this image?')) return;
+
+    console.log('Deleting image:', imageId);
+    console.log('Current images before delete:', existingImages.length);
+
+    try {
+      const res = await fetch(`/api/artwork/${artworkId}/images?imageId=${imageId}`, {
+        method: 'DELETE',
+      });
+
+      console.log('Delete response status:', res.status);
+
+      if (res.ok) {
+        console.log('Delete successful, refetching artwork data');
+        showToast('Image deleted', 'success');
+        // Refetch the artwork data to ensure sync
+        await fetchArtwork();
+      } else {
+        const error = await res.json();
+        console.error('Delete error:', error);
+        showToast(error.error || 'Failed to delete image', 'error');
+      }
+    } catch (err) {
+      console.error('Delete exception:', err);
+      showToast('Failed to delete image', 'error');
+    }
+  };
+
+  // Drag and drop handlers
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const newImages = [...existingImages];
+    const draggedItem = newImages[draggedIndex];
+    newImages.splice(draggedIndex, 1);
+    newImages.splice(index, 0, draggedItem);
+
+    setDraggedIndex(index);
+    setExistingImages(newImages);
+  };
+
+  const handleDragEnd = async () => {
+    if (draggedIndex === null) return;
+    setDraggedIndex(null);
+
+    // Update display orders in database
+    const updatedImages = existingImages.map((img, i) => ({ ...img, display_order: i }));
+
+    try {
+      const res = await fetch(`/api/artwork/${artworkId}/images`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          images: updatedImages.map((img) => ({ id: img.id, display_order: img.display_order })),
+        }),
+      });
+
+      if (res.ok) {
+        showToast('Order updated', 'success');
+      } else {
+        showToast('Failed to update order', 'error');
+        await fetchArtwork(); // Revert on error
+      }
+    } catch {
+      showToast('Failed to update order', 'error');
+      await fetchArtwork(); // Revert on error
+    }
+  };
+
   const convertHeicToJpeg = async (file: File): Promise<Blob> => {
     const heic2any = (await import('heic2any')).default;
     const convertedBlob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
     return Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
   };
 
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNewImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const remaining = 10 - imageFiles.length;
+    console.log('Files selected:', files.length);
+    const remaining = 24 - (existingImages.length + newImageFiles.length);
     const filesToAdd = files.slice(0, remaining);
+    console.log('Files to add:', filesToAdd.length);
 
     for (const file of filesToAdd) {
       if (file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')) {
         const tempPreview = URL.createObjectURL(file);
-        setImageFiles((prev) => [...prev, { file, preview: tempPreview, isConverting: true }]);
+        setNewImageFiles((prev) => [...prev, { file, preview: tempPreview, isConverting: true }]);
 
         try {
           const convertedBlob = await convertHeicToJpeg(file);
@@ -151,42 +257,89 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
           });
           const preview = URL.createObjectURL(convertedBlob);
 
-          setImageFiles((prev) =>
+          setNewImageFiles((prev) =>
             prev.map((img) => (img.file === file ? { file: convertedFile, preview, isConverting: false } : img))
           );
           URL.revokeObjectURL(tempPreview);
         } catch {
           showToast('Failed to convert HEIC image', 'error');
-          setImageFiles((prev) => prev.filter((img) => img.file !== file));
+          setNewImageFiles((prev) => prev.filter((img) => img.file !== file));
           URL.revokeObjectURL(tempPreview);
         }
       } else {
         const preview = URL.createObjectURL(file);
-        setImageFiles((prev) => [...prev, { file, preview }]);
+        setNewImageFiles((prev) => [...prev, { file, preview }]);
       }
     }
 
     if (e.target) e.target.value = '';
   };
 
-  const removeImage = (index: number) => {
-    URL.revokeObjectURL(imageFiles[index].preview);
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+  const removeNewImage = (index: number) => {
+    URL.revokeObjectURL(newImageFiles[index].preview);
+    setNewImageFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const clearAllImages = () => {
-    imageFiles.forEach((img) => URL.revokeObjectURL(img.preview));
-    setImageFiles([]);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
+    console.log('Form submitted. New images to upload:', newImageFiles.length);
     setLoading(true);
 
     try {
+      // First, upload any new images
+      if (newImageFiles.length > 0) {
+        console.log('Uploading', newImageFiles.length, 'new images...');
+        const uploadedUrls: string[] = [];
+        
+        for (const { file } of newImageFiles) {
+          console.log('Uploading file:', file.name);
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const uploadRes = await fetch('/api/upload-image', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (uploadRes.ok) {
+            const data = await uploadRes.json();
+            console.log('Uploaded:', data.url);
+            uploadedUrls.push(data.url);
+          } else {
+            console.error('Upload failed for:', file.name);
+          }
+        }
+
+        // Add uploaded images to database
+        if (uploadedUrls.length > 0) {
+          console.log('Adding', uploadedUrls.length, 'images to database...');
+          const startOrder = existingImages.length;
+          const imagesToAdd = uploadedUrls.map((url, i) => ({
+            image_url: url,
+            display_order: startOrder + i,
+          }));
+
+          const imageRes = await fetch(`/api/artwork/${artworkId}/images`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ images: imagesToAdd }),
+          });
+
+          if (!imageRes.ok) {
+            console.error('Failed to add images to database');
+            showToast('Failed to save images', 'error');
+            setLoading(false);
+            return;
+          }
+          console.log('Images added to database successfully');
+        }
+      }
+
       // Update artwork metadata
+      console.log('Updating artwork metadata...');
       const res = await fetch(`/api/artwork/${artworkId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -206,7 +359,8 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
         const error = await res.json();
         showToast(error.error || 'Update failed', 'error');
       }
-    } catch {
+    } catch (err) {
+      console.error('Submit error:', err);
       showToast('Update failed', 'error');
     } finally {
       setLoading(false);
@@ -216,8 +370,8 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
   if (isLoadingArtwork) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 size={48} className="text-blue-600 animate-spin" />
+        <div className="admin-loading-container">
+          <Loader2 size={48} className="admin-spinner" />
         </div>
       </AdminLayout>
     );
@@ -226,66 +380,66 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
   return (
     <AdminLayout>
       {/* Toast */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-3">
+      <div className="toast-container">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-lg backdrop-blur-sm ${
-              toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
-            }`}
+            className={`toast ${toast.type === 'success' ? 'toast-success' : 'toast-error'}`}
           >
-            {toast.type === 'success' ? <CheckIcon size={20} /> : <AlertCircle size={20} />}
-            <span className="font-medium">{toast.message}</span>
+            {toast.message}
           </div>
         ))}
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-16">
-        <div className="mb-8">
+      <div className="admin-form-page">
+        <div className="admin-form-page-header">
           <button
             onClick={() => router.push('/admin/posts')}
-            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-medium transition mb-4"
+            className="admin-back-link"
           >
-            <ArrowLeft size={20} />
-            Back to Manage Posts
+            <ArrowLeft size={18} />
+            Back 
           </button>
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900">Edit Artwork</h2>
+          <h1 className="admin-form-page-title">Edit Artwork</h1>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8 md:space-y-10 lg:space-y-14">
+        <form onSubmit={handleSubmit}>
           {/* Title */}
-          <div>
-            <label className="block text-2xl font-bold text-slate-900 mb-6">TITLE *</label>
+          <div className="admin-form-section">
+            <label htmlFor="title" className="admin-form-label">Title *</label>
             <input
+              id="title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter artwork title"
-              className="w-full px-6 py-6 text-xl bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
+              className="admin-form-input"
+              required
             />
           </div>
 
           {/* Gallery & Price */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Gallery - 2/3 width */}
-            <div className="md:col-span-2">
-              <label className="block text-2xl font-bold text-slate-900 mb-6">GALLERY</label>
+          <div className="admin-form-section">
+            <div className="admin-form-row two-cols">
+              {/* Gallery */}
+              <div className="admin-form-group">
+                <label htmlFor="gallery" className="admin-form-label">Gallery</label>
               {showNewGallery ? (
-                <div className="space-y-3">
+                  <div>
                   <input
                     type="text"
                     value={newGalleryName}
                     onChange={(e) => setNewGalleryName(e.target.value)}
                     placeholder="Gallery name"
                     autoFocus
-                    className="w-full px-6 py-6 text-xl bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
+                      className="admin-form-input"
                   />
-                  <div className="flex gap-2">
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
                     <button
                       type="button"
                       onClick={handleCreateGallery}
                       disabled={creatingGallery}
-                      className="px-6 py-3 bg-blue-600 text-white text-base font-medium rounded-lg hover:bg-blue-700 transition disabled:bg-slate-400"
+                        className="admin-primary-button"
                     >
                       {creatingGallery ? 'Creating...' : 'Create'}
                     </button>
@@ -295,19 +449,19 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
                         setShowNewGallery(false);
                         setNewGalleryName('');
                       }}
-                      className="px-6 py-3 text-slate-600 text-base font-medium hover:bg-slate-100 rounded-lg transition"
+                        className="admin-secondary-button"
                     >
                       Cancel
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="flex gap-2">
+                  <div className="admin-gallery-selector">
                   <select
+                      id="gallery"
                     value={selectedGallery}
                     onChange={(e) => setSelectedGallery(e.target.value)}
-                    className="flex-1 px-6 py-6 text-xl bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
-                    aria-label="Select gallery"
+                      className="admin-form-select"
                   >
                     <option value="">No gallery</option>
                     {galleries.map((g) => (
@@ -319,85 +473,200 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
                   <button
                     type="button"
                     onClick={() => setShowNewGallery(true)}
-                    className="px-6 py-6 text-blue-600 font-medium hover:bg-blue-50 rounded-xl transition flex items-center gap-2"
-                    aria-label="Create new gallery"
+                      className="admin-add-gallery-button"
+                      title="Create new gallery"
                   >
-                    <FolderPlus size={24} />
+                      <FolderPlus size={20} />
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Price - 1/3 width */}
-            <div>
-              <label className="block text-2xl font-bold text-slate-900 mb-6">PRICE</label>
-              <div className="relative">
-                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 text-xl font-medium">$</span>
+              {/* Price */}
+              <div className="admin-form-group">
+                <label htmlFor="price" className="admin-form-label">Price</label>
+                <div className="admin-price-input-wrapper">
+                  <span className="admin-price-symbol">$</span>
                 <input
+                    id="price"
                   type="number"
                   step="0.01"
                   min="0"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   placeholder="0.00"
-                  className="w-full pl-14 pr-6 py-6 text-xl bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
+                    className="admin-form-input"
                 />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Note about images */}
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
-            <p className="text-blue-900 font-medium">
-              Note: Image management will be added in a future update. To change images, please delete and re-upload the artwork.
-            </p>
+          {/* Images */}
+          <div className="admin-image-upload-section">
+            <div className="admin-form-label" style={{ marginBottom: '1rem' }}>
+              Images ({existingImages.length + newImageFiles.length} / 24)
+            </div>
+
+            {/* Existing Images */}
+            {existingImages.length > 0 && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#57534e', marginBottom: '0.75rem' }}>
+                  Current Images
+                </h4>
+                <div className="admin-image-preview-grid">
+                  {existingImages.map((img, index) => (
+                    <div
+                      key={img.id}
+                      className="admin-image-preview-item"
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragEnd={handleDragEnd}
+                      style={{
+                        cursor: 'grab',
+                        opacity: draggedIndex === index ? 0.5 : 1,
+                        transition: 'opacity 0.2s'
+                      }}
+                    >
+                      <Image src={img.image_url} alt={`Image ${index + 1}`} fill style={{ objectFit: 'cover' }} />
+                      
+                      {/* Drag indicator */}
+                      <div style={{ 
+                        position: 'absolute', 
+                        top: '0.5rem', 
+                        left: '0.5rem', 
+                        background: 'rgba(0,0,0,0.7)', 
+                        color: 'white', 
+                        fontSize: '0.75rem', 
+                        padding: '0.25rem 0.5rem', 
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}>
+                        <span style={{ fontSize: '0.875rem' }}>⋮⋮</span>
+                        <span>Drag to reorder</span>
+                      </div>
+                      
+                      {/* Delete button */}
+                      <button
+                        type="button"
+                        onClick={() => deleteExistingImage(img.id)}
+                        className="admin-image-remove-button"
+                        aria-label="Remove image"
+                      >
+                        <X size={16} />
+                      </button>
+                      
+                      {/* Image number */}
+                      <div style={{ position: 'absolute', bottom: '0.5rem', left: '0.5rem', background: 'rgba(0,0,0,0.7)', color: 'white', fontSize: '0.75rem', fontWeight: 700, padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
+                        {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* New Images to Upload */}
+            {newImageFiles.length > 0 && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#57534e', marginBottom: '0.75rem' }}>
+                  New Images (will be uploaded on save)
+                </h4>
+                <div className="admin-image-preview-grid">
+                  {newImageFiles.map((img, index) => (
+                    <div key={index} className="admin-image-preview-item">
+                      {img.isConverting ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                          <Loader2 size={28} className="admin-spinner" />
+                        </div>
+                      ) : (
+                        <Image src={img.preview} alt={`New ${index + 1}`} fill style={{ objectFit: 'cover' }} />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeNewImage(index)}
+                        className="admin-image-remove-button"
+                        aria-label="Remove image"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Add More Images Button */}
+            {existingImages.length + newImageFiles.length < 24 && (
+              <label className="admin-image-upload-area" style={{ marginTop: newImageFiles.length > 0 || existingImages.length > 0 ? '1rem' : 0 }}>
+                <div className="admin-image-upload-icon">
+                  <Plus size={40} />
+                </div>
+                <div className="admin-image-upload-text">
+                  {existingImages.length === 0 && newImageFiles.length === 0
+                    ? 'Click to upload images'
+                    : 'Add more images'}
+                </div>
+                <div className="admin-image-upload-hint">
+                  {24 - (existingImages.length + newImageFiles.length)} more images allowed
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleNewImageSelect}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            )}
           </div>
 
           {/* Description */}
-          <div>
-            <label className="block text-2xl font-bold text-slate-900 mb-6">DESCRIPTION</label>
+          <div className="admin-form-section">
+            <label htmlFor="description" className="admin-form-label">Description</label>
             <RichTextEditor content={description} onChange={setDescription} />
           </div>
 
           {/* Featured */}
-          <div>
-            <label className="block text-2xl font-bold text-slate-900 mb-6">FEATURED</label>
-            <label className="flex items-center gap-5 cursor-pointer p-6 bg-slate-50 rounded-xl hover:bg-slate-100 transition">
+          <div className="admin-form-section">
+            <h3 className="admin-form-label">Featured</h3>
+            <label className="admin-checkbox-wrapper">
               <input
                 type="checkbox"
                 checked={isPinned}
                 onChange={(e) => setIsPinned(e.target.checked)}
-                className="w-6 h-6 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
               />
-              <div>
-                <p className="text-lg font-medium text-slate-900">Pin to homepage</p>
-                <p className="text-base text-slate-500">Featured items appear first</p>
+              <div className="admin-checkbox-label">
+                <p className="admin-checkbox-title">Pin to homepage</p>
+                <p className="admin-checkbox-description">Featured items appear first</p>
               </div>
             </label>
           </div>
 
           {/* Submit */}
-          <div className="pt-8">
             <button
               type="submit"
               disabled={loading || !title.trim()}
-              className="w-full py-6 bg-blue-600 text-white text-xl font-semibold rounded-xl hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-200 transition-all disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            className="admin-submit-button"
             >
               {loading ? (
                 <>
-                  <Loader2 size={28} className="animate-spin" />
-                  Updating...
+                <Loader2 size={20} className="admin-spinner" />
+                <span>Updating...</span>
                 </>
               ) : (
                 <>
-                  <Check size={28} />
-                  Update Artwork
+                <Check size={20} />
+                <span>Update Artwork</span>
                 </>
               )}
             </button>
-          </div>
         </form>
-      </main>
+      </div>
     </AdminLayout>
   );
 }

@@ -31,24 +31,22 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
     },
     editorProps: {
       attributes: {
-        class: 'prose max-w-none focus:outline-none min-h-[140px] p-5 text-slate-700',
+        class: 'prose max-w-none focus:outline-none text-slate-700 bg-white',
       },
     },
   });
 
   if (!editor) {
     return (
-      <div className="bg-slate-50 border-2 border-slate-200 rounded-xl overflow-hidden">
-        <div className="bg-white border-b border-slate-200 p-3 h-12" />
-        <div className="min-h-[140px] p-5 bg-slate-50" />
+      <div className="rich-text-editor-wrapper">
+        <div className="rich-text-toolbar" style={{ height: '3rem' }} />
+        <div style={{ minHeight: '140px', padding: '1.25rem', background: '#fafaf9' }} />
       </div>
     );
   }
 
   const buttonClass = (isActive: boolean) => 
-    `w-9 h-9 rounded-lg flex items-center justify-center transition ${
-      isActive ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-    }`;
+    `rich-text-icon-button ${isActive ? 'active' : ''}`;
 
   const applyFontSize = (size: string) => {
     if (!editor) return;
@@ -58,30 +56,28 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
   };
 
   return (
-    <div className="bg-slate-50 border-2 border-slate-200 rounded-xl overflow-hidden focus-within:bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100 transition">
-      <div className="bg-white border-b border-slate-200 p-3 flex items-center gap-1.5">
+    <div className="rich-text-editor-wrapper">
+      <div className="rich-text-toolbar">
         {/* Font Size */}
         <div className="relative">
           <button
             type="button"
             onClick={() => setShowFontMenu(!showFontMenu)}
             title="Font Size"
-            className={`h-9 px-3 rounded-lg flex items-center gap-1.5 transition text-sm font-medium ${
-              showFontMenu ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-            }`}
+            className={`rich-text-button ${showFontMenu ? 'active' : ''}`}
           >
             <Type size={16} />
-            Size
+            <span>Size</span>
           </button>
           
           {showFontMenu && (
-            <div className="absolute top-full left-0 mt-2 bg-white border-2 border-slate-200 rounded-xl shadow-xl overflow-hidden z-10 min-w-[140px]">
+            <div className="rich-text-dropdown">
               {fontSizes.map((size) => (
                 <button
                   key={size.value}
                   type="button"
                   onClick={() => applyFontSize(size.value)}
-                  className="w-full px-4 py-3 text-left hover:bg-blue-50 transition text-slate-700 text-sm font-medium"
+                  className="rich-text-dropdown-item"
                 >
                   {size.label}
                 </button>
@@ -117,7 +113,7 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
           <UnderlineIcon size={16} />
         </button>
         
-        <div className="w-px h-6 bg-slate-300" />
+        <div className="rich-text-divider" />
         
         <button
           type="button"

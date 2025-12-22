@@ -394,7 +394,7 @@ export default function AdminDashboard() {
               className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-medium transition mb-4"
             >
               <ArrowLeft size={20} />
-              Back to Manage Posts
+              Back 
             </button>
             <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
               {editingArtworkId ? 'Edit Artwork' : 'Upload New Artwork'}

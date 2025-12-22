@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Image as ImageIcon, Check, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import AdminLayout from './AdminLayout';
+import AdminLayout from './layout/AdminLayout';
 import { Gallery, ArtworkPost } from '@/types/database';
 
 interface Toast {
@@ -114,8 +114,8 @@ export default function GalleryDetailClient({ galleryId }: GalleryDetailClientPr
   if (!gallery) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <p className="text-slate-500">Loading...</p>
+        <div className="admin-loading-container">
+          <p>Loading...</p>
         </div>
       </AdminLayout>
     );
@@ -124,46 +124,44 @@ export default function GalleryDetailClient({ galleryId }: GalleryDetailClientPr
   return (
     <AdminLayout>
       {/* Toast */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-3">
+      <div className="toast-container">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-lg backdrop-blur-sm ${
-              toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
-            }`}
+            className={`toast ${toast.type === 'success' ? 'toast-success' : 'toast-error'}`}
           >
-            {toast.type === 'success' ? <Check size={20} /> : <AlertCircle size={20} />}
-            <span className="font-medium">{toast.message}</span>
+            {toast.message}
           </div>
         ))}
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-16">
+      <div className="admin-page-container">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 mb-8">
+        <div className="admin-page-header">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1 md:mb-2">{gallery.name}</h2>
-            <p className="text-sm md:text-base text-slate-600">View and move artworks in this gallery</p>
+            <h1 className="admin-page-title">{gallery.name}</h1>
+            <p className="admin-page-subtitle">View and move artworks in this gallery</p>
           </div>
           <button
             onClick={() => router.push('/admin/galleries')}
-            className="px-4 py-2 text-slate-600 hover:text-slate-900 font-medium transition flex items-center gap-2"
+            className="admin-back-link"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={18} />
             Back to Galleries
           </button>
         </div>
 
         {/* Selection Actions */}
         {selectedArtworks.size > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <p className="text-blue-900 font-medium">{selectedArtworks.size} artwork(s) selected</p>
-              <div className="flex items-center gap-3">
+          <div className="admin-info-box" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+              <p style={{ color: '#1E40AF', fontWeight: 600 }}>{selectedArtworks.size} artwork(s) selected</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <select
                   value={moveToGallery}
                   onChange={(e) => setMoveToGallery(e.target.value)}
-                  className="px-4 py-2 text-sm border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  className="admin-form-select"
+                  style={{ width: 'auto', minWidth: '150px' }}
                   aria-label="Select destination gallery"
                 >
                   <option value="">Move to...</option>
@@ -179,13 +177,15 @@ export default function GalleryDetailClient({ galleryId }: GalleryDetailClientPr
                 <button
                   onClick={moveSelectedArtworks}
                   disabled={!moveToGallery}
-                  className="px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition disabled:bg-slate-300"
+                  className="admin-primary-button"
+                  style={{ padding: '0.5rem 1.25rem' }}
                 >
                   Move
                 </button>
                 <button
                   onClick={() => setSelectedArtworks(new Set())}
-                  className="px-4 py-2 text-slate-600 hover:text-slate-900 text-sm font-medium"
+                  className="admin-secondary-button"
+                  style={{ padding: '0.5rem 1rem' }}
                 >
                   Cancel
                 </button>
@@ -195,48 +195,48 @@ export default function GalleryDetailClient({ galleryId }: GalleryDetailClientPr
         )}
 
         {/* Artworks List */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div style={{ background: '#FFFFFF', border: '1px solid #e7e5e4', borderRadius: '12px', overflow: 'hidden' }}>
           {artworks.length === 0 ? (
-            <div className="p-20 text-center">
-              <p className="text-slate-500">No artworks in this gallery</p>
+            <div className="admin-empty-state">
+              <p>No artworks in this gallery</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div style={{ borderTop: '1px solid #e7e5e4' }}>
               {artworks.map((artwork) => (
-                <div key={artwork.id} className="p-4 md:p-6 hover:bg-slate-50 transition">
-                  <div className="flex flex-wrap items-start gap-3 md:gap-4">
+                <div key={artwork.id} style={{ padding: '1.5rem', borderBottom: '1px solid #e7e5e4', transition: 'background 0.2s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                     {/* Checkbox */}
                     <input
                       type="checkbox"
                       checked={selectedArtworks.has(artwork.id)}
                       onChange={() => toggleArtworkSelection(artwork.id)}
-                      className="mt-6 w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                      style={{ width: '1.25rem', height: '1.25rem', accentColor: '#1c1917' }}
                       aria-label={`Select ${artwork.title}`}
                     />
 
                     {/* Thumbnail */}
-                    <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
+                    <div style={{ width: '80px', height: '80px', background: '#f5f5f4', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
                       {artwork.images?.[0] ? (
                         <Image
                           src={artwork.images[0].image_url}
                           alt={artwork.title}
                           width={80}
                           height={80}
-                          className="w-full h-full object-cover"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ImageIcon size={24} className="text-slate-300" />
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <ImageIcon size={24} style={{ color: '#a8a29e' }} />
                         </div>
                       )}
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 min-w-[200px]">
-                      <h3 className="font-semibold text-sm md:text-base text-slate-900 mb-1">{artwork.title}</h3>
+                    <div style={{ flex: 1, minWidth: '200px' }}>
+                      <h3 style={{ fontWeight: 600, fontSize: '0.9375rem', color: '#1c1917', marginBottom: '0.25rem' }}>{artwork.title}</h3>
                       {artwork.price && (
-                        <p className="text-xs md:text-sm text-slate-600">
-                          <span className="font-medium">Price:</span> ${artwork.price}
+                        <p style={{ fontSize: '0.875rem', color: '#78716c' }}>
+                          <span style={{ fontWeight: 600 }}>Price:</span> ${artwork.price}
                         </p>
                       )}
                     </div>
@@ -244,7 +244,7 @@ export default function GalleryDetailClient({ galleryId }: GalleryDetailClientPr
                     {/* Edit Button */}
                     <button
                       onClick={() => router.push(`/admin/posts/${artwork.id}`)}
-                      className="px-4 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition whitespace-nowrap flex-shrink-0"
+                      className="admin-text-button"
                     >
                       Edit Post
                     </button>
@@ -254,7 +254,7 @@ export default function GalleryDetailClient({ galleryId }: GalleryDetailClientPr
             </div>
           )}
         </div>
-      </main>
+      </div>
     </AdminLayout>
   );
 }
