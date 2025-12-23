@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
-import { uploadToCloudflare } from '@/lib/cloudflare';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { rateLimit, getIdentifier } from '@/lib/rateLimit';
+
+// No longer need to increase body size - files upload directly to R2
+export const maxDuration = 30;
+export const runtime = 'nodejs';
 
 // Rate limit: 20 artwork uploads per hour per user
 const ARTWORK_UPLOAD_RATE_LIMIT = {
@@ -40,19 +43,35 @@ export async function POST(request: Request) {
       );
     }
 
-    const formData = await request.formData();
-    const title = formData.get('title') as string;
-    const description = formData.get('description') as string;
-    const price = formData.get('price') as string;
-    const galleryId = formData.get('gallery_id') as string | null;
-    const isPinned = formData.get('is_pinned') === 'true';
-    const images = formData.getAll('images') as File[];
+    const body = await request.json();
+    const { title, description, price, gallery_id, is_pinned, imageUrls } = body;
 
-    if (!title || images.length === 0) {
+    if (!title || !imageUrls || imageUrls.length === 0) {
       return NextResponse.json(
-        { error: 'Title and at least one image are required' },
+        { error: 'Title and at least one image URL are required' },
         { status: 400 }
       );
+    }
+
+    // Validate image URLs
+    if (!Array.isArray(imageUrls)) {
+      return NextResponse.json(
+        { error: 'imageUrls must be an array' },
+        { status: 400 }
+      );
+    }
+
+    // Validate URLs are from our Cloudflare R2 domain
+    const publicUrl = process.env.CLOUDFLARE_PUBLIC_URL;
+    if (publicUrl) {
+      for (const url of imageUrls) {
+        if (typeof url !== 'string' || !url.startsWith(publicUrl)) {
+          return NextResponse.json(
+            { error: 'Invalid image URL. Must be from Cloudflare R2.' },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Create artwork post
@@ -61,10 +80,10 @@ export async function POST(request: Request) {
       .insert([
         {
           title,
-          description,
+          description: description || null,
           price: price ? parseFloat(price) : null,
-          gallery_id: galleryId || null,
-          is_pinned: isPinned,
+          gallery_id: gallery_id || null,
+          is_pinned: is_pinned || false,
         },
       ])
       .select()
@@ -74,23 +93,12 @@ export async function POST(request: Request) {
       throw artworkError;
     }
 
-    // Upload images to Cloudflare and save URLs
-    const imageUploads = await Promise.all(
-      images.map(async (image, index) => {
-        const buffer = Buffer.from(await image.arrayBuffer());
-        const imageUrl = await uploadToCloudflare(
-          buffer,
-          image.name,
-          image.type
-        );
-
-        return {
-          artwork_post_id: artworkPost.id,
-          image_url: imageUrl,
-          display_order: index,
-        };
-      })
-    );
+    // Save image URLs (already uploaded to R2)
+    const imageUploads = imageUrls.map((imageUrl: string, index: number) => ({
+      artwork_post_id: artworkPost.id,
+      image_url: imageUrl,
+      display_order: index,
+    }));
 
     // Insert image records
     const { error: imagesError } = await supabaseAdmin
@@ -113,6 +121,7 @@ export async function POST(request: Request) {
       }
     );
   } catch (error) {
+    console.error('[UPLOAD] Error:', error instanceof Error ? error.message : 'Unknown error');
     return NextResponse.json(
       { error: 'Failed to upload artwork' },
       { status: 500 }

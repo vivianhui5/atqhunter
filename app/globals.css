@@ -1605,6 +1605,11 @@
   color: white;
 }
 
+.toast-info {
+  background: #3B82F6;
+  color: white;
+}
+
 /* Empty State */
 .admin-empty-state {
   text-align: center;

@@ -18,7 +18,7 @@ interface ImageFile {
 interface Toast {
   id: number;
   message: string;
-  type: 'success' | 'error';
+  type: 'success' | 'error' | 'info';
 }
 
 export default function UploadArtworkClient() {
@@ -37,7 +37,7 @@ export default function UploadArtworkClient() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  const showToast = (message: string, type: 'success' | 'error') => {
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
@@ -153,33 +153,92 @@ export default function UploadArtworkClient() {
     setImageFiles([]);
   };
 
+  const uploadImageToR2 = async (file: File, fileName: string): Promise<string> => {
+    // Convert HEIC to JPEG if needed
+    let fileToUpload = file;
+    let contentType = file.type;
+
+    if (file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')) {
+      const convertedBlob = await convertHeicToJpeg(file);
+      fileToUpload = new File([convertedBlob], fileName.replace(/\.heic$/i, '.jpg'), {
+        type: 'image/jpeg',
+      });
+      contentType = 'image/jpeg';
+    }
+
+    // Get presigned URL
+    const presignedRes = await fetch('/api/upload/presigned', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: fileToUpload.name,
+        contentType: contentType || 'image/jpeg',
+      }),
+    });
+
+    if (!presignedRes.ok) {
+      const error = await presignedRes.json().catch(() => ({ error: 'Failed to get upload URL' }));
+      throw new Error(error.error || 'Failed to get upload URL');
+    }
+
+    const { uploadUrl, publicUrl } = await presignedRes.json();
+
+    // Upload directly to R2
+    const uploadRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: fileToUpload,
+      headers: {
+        'Content-Type': contentType || 'image/jpeg',
+      },
+    });
+
+    if (!uploadRes.ok) {
+      throw new Error(`Failed to upload image: ${uploadRes.statusText}`);
+    }
+
+    return publicUrl;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || imageFiles.length === 0) return;
 
     setLoading(true);
-    const formData = new FormData();
-    formData.append('title', title.trim());
-    formData.append('description', description);
-    if (price) formData.append('price', price);
-    if (selectedGallery) formData.append('gallery_id', selectedGallery);
-    formData.append('is_pinned', isPinned.toString());
-
-    imageFiles.forEach((img) => formData.append('images', img.file));
 
     try {
-      const res = await fetch('/api/artwork/upload', { method: 'POST', body: formData });
+      // Step 1: Upload all images directly to R2
+      showToast('Uploading images...', 'info');
+      const imageUrls = await Promise.all(
+        imageFiles.map((img) => uploadImageToR2(img.file, img.file.name))
+      );
+
+      // Step 2: Send metadata and image URLs to API
+      showToast('Saving artwork...', 'info');
+      const res = await fetch('/api/artwork/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          description,
+          price: price || null,
+          gallery_id: selectedGallery || null,
+          is_pinned: isPinned,
+          imageUrls,
+        }),
+      });
 
       if (res.ok) {
         showToast('Artwork uploaded successfully!', 'success');
         clearForm();
         setTimeout(() => router.push('/admin/posts'), 1000);
       } else {
-        const error = await res.json();
+        const error = await res.json().catch(() => ({ error: 'Upload failed' }));
         showToast(error.error || 'Upload failed', 'error');
       }
-    } catch {
-      showToast('Upload failed', 'error');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Upload failed. Please try again.';
+      showToast(errorMessage, 'error');
+      console.error('Upload error:', err);
     } finally {
       setLoading(false);
     }
@@ -201,7 +260,13 @@ export default function UploadArtworkClient() {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`toast ${toast.type === 'success' ? 'toast-success' : 'toast-error'}`}
+            className={`toast ${
+              toast.type === 'success' 
+                ? 'toast-success' 
+                : toast.type === 'error' 
+                ? 'toast-error' 
+                : 'toast-info'
+            }`}
           >
             {toast.message}
           </div>

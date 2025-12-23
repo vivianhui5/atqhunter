@@ -1,16 +1,12 @@
 import { NextResponse } from 'next/server';
-import { uploadToCloudflare } from '@/lib/cloudflare';
 import { requireAuth } from '@/lib/auth';
+import { generatePresignedUploadUrl } from '@/lib/cloudflare';
 import { rateLimit, getIdentifier } from '@/lib/rateLimit';
 
-// Increase body size limit for Vercel
-export const maxDuration = 30;
-export const runtime = 'nodejs';
-
-// Rate limit: 50 uploads per hour per user
-const UPLOAD_RATE_LIMIT = {
+// Rate limit: 100 presigned URL requests per hour per IP
+const PRESIGNED_URL_RATE_LIMIT = {
   interval: 60 * 60 * 1000, // 1 hour
-  uniqueTokenPerInterval: 1000, // 50 uploads per hour
+  uniqueTokenPerInterval: 100, // 100 requests per hour
 };
 
 export async function POST(request: Request) {
@@ -19,12 +15,12 @@ export async function POST(request: Request) {
 
     // Rate limiting
     const identifier = getIdentifier(request);
-    const rateLimitResult = await rateLimit(identifier, UPLOAD_RATE_LIMIT);
+    const rateLimitResult = await rateLimit(identifier, PRESIGNED_URL_RATE_LIMIT);
 
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { 
-          error: 'Too many uploads. Please try again later.',
+          error: 'Too many requests. Please try again later.',
           retryAfter: Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
         },
         { 
@@ -38,32 +34,29 @@ export async function POST(request: Request) {
         }
       );
     }
-    
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
 
-    if (!file) {
-      return NextResponse.json({ error: 'File required' }, { status: 400 });
+    const { fileName, contentType } = await request.json();
+
+    if (!fileName || !contentType) {
+      return NextResponse.json(
+        { error: 'fileName and contentType are required' },
+        { status: 400 }
+      );
     }
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'];
-    if (!allowedTypes.includes(file.type) && !file.name.toLowerCase().endsWith('.heic')) {
-      return NextResponse.json({ error: 'Invalid file type' }, { status: 400 });
+    if (!allowedTypes.includes(contentType) && !fileName.toLowerCase().endsWith('.heic')) {
+      return NextResponse.json(
+        { error: 'Invalid file type. Only JPG, PNG, WEBP, HEIC are allowed.' },
+        { status: 400 }
+      );
     }
 
-    // Validate file size (max 4MB for Vercel compatibility)
-    const maxSize = 4 * 1024 * 1024; // 4MB (Vercel has 4.5MB body limit)
-    if (file.size > maxSize) {
-      return NextResponse.json({ error: 'File too large (max 4MB per image)' }, { status: 400 });
-    }
-
-    // Upload to Cloudflare
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const imageUrl = await uploadToCloudflare(buffer, file.name, file.type);
+    const { uploadUrl, publicUrl, key } = await generatePresignedUploadUrl(fileName, contentType);
 
     return NextResponse.json(
-      { url: imageUrl },
+      { uploadUrl, publicUrl, key },
       {
         headers: {
           'X-RateLimit-Limit': rateLimitResult.limit.toString(),
@@ -73,9 +66,9 @@ export async function POST(request: Request) {
       }
     );
   } catch (error) {
-    console.error('[UPLOAD-IMAGE] Error:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('[PRESIGNED-URL] Error:', error instanceof Error ? error.message : 'Unknown error');
     return NextResponse.json(
-      { error: 'Failed to upload image' },
+      { error: 'Failed to generate upload URL' },
       { status: 500 }
     );
   }

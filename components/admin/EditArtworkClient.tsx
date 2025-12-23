@@ -11,7 +11,7 @@ import { Gallery } from '@/types/database';
 interface Toast {
   id: number;
   message: string;
-  type: 'success' | 'error';
+  type: 'success' | 'error' | 'info';
 }
 
 interface ArtworkImage {
@@ -48,7 +48,7 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  const showToast = (message: string, type: 'success' | 'error') => {
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
@@ -282,6 +282,52 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
   };
 
 
+  const uploadImageToR2 = async (file: File, fileName: string): Promise<string> => {
+    // Convert HEIC to JPEG if needed
+    let fileToUpload = file;
+    let contentType = file.type;
+
+    if (file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')) {
+      const convertedBlob = await convertHeicToJpeg(file);
+      fileToUpload = new File([convertedBlob], fileName.replace(/\.heic$/i, '.jpg'), {
+        type: 'image/jpeg',
+      });
+      contentType = 'image/jpeg';
+    }
+
+    // Get presigned URL
+    const presignedRes = await fetch('/api/upload/presigned', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: fileToUpload.name,
+        contentType: contentType || 'image/jpeg',
+      }),
+    });
+
+    if (!presignedRes.ok) {
+      const error = await presignedRes.json().catch(() => ({ error: 'Failed to get upload URL' }));
+      throw new Error(error.error || 'Failed to get upload URL');
+    }
+
+    const { uploadUrl, publicUrl } = await presignedRes.json();
+
+    // Upload directly to R2
+    const uploadRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: fileToUpload,
+      headers: {
+        'Content-Type': contentType || 'image/jpeg',
+      },
+    });
+
+    if (!uploadRes.ok) {
+      throw new Error(`Failed to upload image: ${uploadRes.statusText}`);
+    }
+
+    return publicUrl;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -290,29 +336,13 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
     setLoading(true);
 
     try {
-      // First, upload any new images
+      // First, upload any new images directly to R2
       if (newImageFiles.length > 0) {
         console.log('Uploading', newImageFiles.length, 'new images...');
-        const uploadedUrls: string[] = [];
-        
-        for (const { file } of newImageFiles) {
-          console.log('Uploading file:', file.name);
-          const formData = new FormData();
-          formData.append('file', file);
-
-          const uploadRes = await fetch('/api/upload-image', {
-            method: 'POST',
-            body: formData,
-          });
-
-          if (uploadRes.ok) {
-            const data = await uploadRes.json();
-            console.log('Uploaded:', data.url);
-            uploadedUrls.push(data.url);
-          } else {
-            console.error('Upload failed for:', file.name);
-          }
-        }
+        showToast('Uploading images...', 'info');
+        const uploadedUrls = await Promise.all(
+          newImageFiles.map(({ file }) => uploadImageToR2(file, file.name))
+        );
 
         // Add uploaded images to database
         if (uploadedUrls.length > 0) {
@@ -385,7 +415,13 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`toast ${toast.type === 'success' ? 'toast-success' : 'toast-error'}`}
+            className={`toast ${
+              toast.type === 'success' 
+                ? 'toast-success' 
+                : toast.type === 'error' 
+                ? 'toast-error' 
+                : 'toast-info'
+            }`}
           >
             {toast.message}
           </div>

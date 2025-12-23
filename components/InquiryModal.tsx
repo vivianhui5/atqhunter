@@ -44,7 +44,7 @@ export default function InquiryModal({ isOpen, onClose, artworkTitle }: InquiryM
           setEmail('');
           setSubject('');
           setMessage('');
-        }, 2000);
+        }, 8000); // Increased from 2000ms to 8000ms (8 seconds)
       } else {
         const data = await res.json().catch(() => ({ error: 'Unknown error occurred' }));
         setError(data.error || 'Failed to send inquiry');
