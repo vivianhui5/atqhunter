@@ -50,7 +50,7 @@ export default async function GalleriesPage() {
       <main className="galleries-content">
         <PageHeader 
           title="Galleries"
-          description="Explore our collections, each thoughtfully curated to showcase distinct artistic themes."
+          description="Explore thoughtfully curated galleries."
         />
         <GalleryGrid galleries={galleries} />
       </main>

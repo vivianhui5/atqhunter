@@ -6,7 +6,7 @@ export default function SignInButton() {
       onClick={() => window.location.href = '/admin/login'}
       className="sign-in-button"
     >
-      Sign In
+      Admin Sign In
     </button>
   );
 }
