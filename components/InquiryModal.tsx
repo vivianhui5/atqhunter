@@ -46,10 +46,12 @@ export default function InquiryModal({ isOpen, onClose, artworkTitle }: InquiryM
           setMessage('');
         }, 2000);
       } else {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({ error: 'Unknown error occurred' }));
         setError(data.error || 'Failed to send inquiry');
+        console.error('Inquiry error:', data);
       }
     } catch (err) {
+      console.error('Inquiry exception:', err);
       setError('Failed to send inquiry. Please try again.');
     } finally {
       setSending(false);
@@ -83,7 +85,7 @@ export default function InquiryModal({ isOpen, onClose, artworkTitle }: InquiryM
           <div className="inquiry-success">
             <div className="inquiry-success-icon">✓</div>
             <p className="inquiry-success-text">Message sent successfully!</p>
-            <p className="inquiry-success-subtext">You'll receive a copy at your email.</p>
+            <p className="inquiry-success-subtext"> If you sent a relevant inquiry, Dr. Kai Hui will respond shortly.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="inquiry-form">
