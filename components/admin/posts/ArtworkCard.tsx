@@ -9,9 +9,11 @@ interface ArtworkCardProps {
   artwork: ArtworkPost;
   onTogglePin: (id: string, currentPinned: boolean) => void;
   onDelete: (id: string) => void;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
 }
 
-export default function ArtworkCard({ artwork, onTogglePin, onDelete }: ArtworkCardProps) {
+export default function ArtworkCard({ artwork, onTogglePin, onDelete, draggable = false, onDragStart }: ArtworkCardProps) {
   const router = useRouter();
   const firstImage = artwork.images?.sort((a, b) => a.display_order - b.display_order)[0];
   
@@ -31,7 +33,12 @@ export default function ArtworkCard({ artwork, onTogglePin, onDelete }: ArtworkC
   };
 
   return (
-    <div className="admin-artwork-card clickable" onClick={handleCardClick}>
+    <div 
+      className={`admin-artwork-card clickable ${draggable ? 'draggable' : ''}`}
+      onClick={handleCardClick}
+      draggable={draggable}
+      onDragStart={onDragStart}
+    >
       {/* Image */}
       <div className="admin-artwork-image">
         {firstImage ? (

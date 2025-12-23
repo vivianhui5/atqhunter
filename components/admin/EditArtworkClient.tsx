@@ -7,6 +7,8 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import AdminLayout from './layout/AdminLayout';
 import { Gallery } from '@/types/database';
+import { flattenGalleryTree, buildGalleryTree } from '@/lib/gallery-utils';
+import NestedGallerySelect from './NestedGallerySelect';
 
 interface Toast {
   id: number;
@@ -70,11 +72,17 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
     try {
       const res = await fetch('/api/galleries');
       const data = await res.json();
-      setGalleries(data.galleries || []);
+      if (data.galleries) {
+        setGalleries(data.galleries);
+      }
     } catch {
       console.error('Error fetching galleries');
     }
   };
+
+  // Build hierarchical gallery list for dropdown
+  const galleryTree = buildGalleryTree(galleries);
+  const flatGalleryList = flattenGalleryTree(galleryTree);
 
   const fetchArtwork = async () => {
     try {
@@ -494,19 +502,12 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
                 </div>
               ) : (
                   <div className="admin-gallery-selector">
-                  <select
-                      id="gallery"
+                  <NestedGallerySelect
                     value={selectedGallery}
-                    onChange={(e) => setSelectedGallery(e.target.value)}
-                      className="admin-form-select"
-                  >
-                    <option value="">No gallery</option>
-                    {galleries.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedGallery}
+                    galleries={galleries}
+                    placeholder="Select a gallery..."
+                  />
                   <button
                     type="button"
                     onClick={() => setShowNewGallery(true)}

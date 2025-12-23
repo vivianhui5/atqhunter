@@ -70,7 +70,7 @@ export default function InquiryModal({ isOpen, onClose, artworkTitle }: InquiryM
     <div className="inquiry-modal-overlay" onClick={handleClose}>
       <div className="inquiry-modal" onClick={(e) => e.stopPropagation()}>
         <div className="inquiry-modal-header">
-          <h2 className="inquiry-modal-title">Inquire About This Artwork</h2>
+          <h2 className="inquiry-modal-title">Contact</h2>
           <button
             onClick={handleClose}
             className="inquiry-modal-close"

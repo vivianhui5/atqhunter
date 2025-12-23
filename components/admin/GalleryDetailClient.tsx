@@ -47,11 +47,11 @@ export default function GalleryDetailClient({ galleryId }: GalleryDetailClientPr
         setGallery(found);
       } else {
         showToast('Gallery not found', 'error');
-        router.push('/admin/galleries');
+        router.push('/admin/posts');
       }
     } catch {
       showToast('Failed to load gallery', 'error');
-      router.push('/admin/galleries');
+      router.push('/admin/posts');
     }
   };
 
@@ -143,11 +143,11 @@ export default function GalleryDetailClient({ galleryId }: GalleryDetailClientPr
             <p className="admin-page-subtitle">View and move artworks in this gallery</p>
           </div>
           <button
-            onClick={() => router.push('/admin/galleries')}
+            onClick={() => router.push('/admin/posts')}
             className="admin-back-link"
           >
             <ArrowLeft size={18} />
-            Back to Galleries
+            Back to Posts
           </button>
         </div>
 
@@ -165,7 +165,7 @@ export default function GalleryDetailClient({ galleryId }: GalleryDetailClientPr
                   aria-label="Select destination gallery"
                 >
                   <option value="">Move to...</option>
-                  <option value="none">No Gallery</option>
+                  <option value="none">Main/No gallery</option>
                   {galleries
                     .filter((g) => g.id !== galleryId)
                     .map((g) => (

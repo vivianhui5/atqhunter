@@ -1,28 +1,51 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { Gallery } from '@/types/database';
+import { flattenGalleryTree, buildGalleryTree } from '@/lib/gallery-utils';
+import NestedGallerySelect from '../NestedGallerySelect';
 
 interface NewGalleryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (name: string) => Promise<void>;
+  onCreate: (name: string, parentId: string | null) => Promise<void>;
+  parentId?: string | null; // Pre-select a parent when creating from a gallery
+  galleries?: Gallery[]; // All galleries for parent selection
 }
 
-export default function NewGalleryModal({ isOpen, onClose, onCreate }: NewGalleryModalProps) {
+export default function NewGalleryModal({ 
+  isOpen, 
+  onClose, 
+  onCreate,
+  parentId: initialParentId,
+  galleries = []
+}: NewGalleryModalProps) {
   const [name, setName] = useState('');
+  const [parentId, setParentId] = useState<string | null>(initialParentId || null);
   const [isCreating, setIsCreating] = useState(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      setName('');
+      setParentId(initialParentId || null);
+    }
+  }, [isOpen, initialParentId]);
+
   if (!isOpen) return null;
+
+  const tree = buildGalleryTree(galleries);
+  const flatList = flattenGalleryTree(tree);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
     setIsCreating(true);
-    await onCreate(name.trim());
+    await onCreate(name.trim(), parentId);
     setIsCreating(false);
     setName('');
+    setParentId(null);
   };
 
   return (
@@ -30,7 +53,7 @@ export default function NewGalleryModal({ isOpen, onClose, onCreate }: NewGaller
       <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
         <div className="admin-modal-header">
           <h2>Create New Gallery</h2>
-          <button onClick={onClose} className="admin-modal-close">
+          <button onClick={onClose} className="admin-modal-close" aria-label="Close" title="Close">
             <X size={20} />
           </button>
         </div>
@@ -51,6 +74,23 @@ export default function NewGalleryModal({ isOpen, onClose, onCreate }: NewGaller
               required
             />
           </div>
+
+          {galleries.length > 0 && (
+            <div className="admin-form-group">
+              <label htmlFor="gallery-parent" className="admin-form-label">
+                Parent Gallery (optional)
+              </label>
+              <NestedGallerySelect
+                value={parentId || ''}
+                onChange={(value) => setParentId(value || null)}
+                galleries={galleries}
+                placeholder="Main/No gallery"
+              />
+              <p className="admin-form-help-text">
+                Select a parent gallery to create a nested structure
+              </p>
+            </div>
+          )}
 
           <div className="admin-modal-footer">
             <button

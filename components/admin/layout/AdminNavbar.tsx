@@ -33,12 +33,6 @@ export default function AdminNavbar() {
           >
             Manage Featured
           </Link>
-          <Link
-            href="/admin/galleries"
-            className={`admin-nav-link ${isActive('/admin/galleries') ? 'active' : ''}`}
-          >
-            Manage Galleries
-          </Link>
         </div>
 
         {/* Actions */}

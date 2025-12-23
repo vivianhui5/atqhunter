@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import AdminLayout from './layout/AdminLayout';
 import { Gallery } from '@/types/database';
+import NestedGallerySelect from './NestedGallerySelect';
 
 interface ImageFile {
   id: string;
@@ -33,6 +34,7 @@ export default function UploadArtworkClient() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [showNewGallery, setShowNewGallery] = useState(false);
   const [newGalleryName, setNewGalleryName] = useState('');
+  const [selectedParentGallery, setSelectedParentGallery] = useState('');
   const [creatingGallery, setCreatingGallery] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -67,7 +69,9 @@ export default function UploadArtworkClient() {
     try {
       const res = await fetch('/api/galleries');
       const data = await res.json();
-      setGalleries(data.galleries || []);
+      if (data.galleries) {
+        setGalleries(data.galleries);
+      }
     } catch {
       console.error('Error fetching galleries');
     }
@@ -88,7 +92,10 @@ export default function UploadArtworkClient() {
       const res = await fetch('/api/galleries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: trimmedName }),
+        body: JSON.stringify({ 
+          name: trimmedName,
+          parent_id: selectedParentGallery || null
+        }),
       });
 
       if (res.ok) {
@@ -97,6 +104,7 @@ export default function UploadArtworkClient() {
         setSelectedGallery(data.gallery.id);
         setShowNewGallery(false);
         setNewGalleryName('');
+        setSelectedParentGallery('');
         showToast('Gallery created!', 'success');
       }
     } catch {
@@ -328,6 +336,14 @@ export default function UploadArtworkClient() {
                     autoFocus
                       className="admin-form-input"
                   />
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <NestedGallerySelect
+                      value={selectedParentGallery}
+                      onChange={setSelectedParentGallery}
+                      galleries={galleries}
+                      placeholder="Main/No gallery"
+                    />
+                  </div>
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
                     <button
                       type="button"
@@ -342,6 +358,7 @@ export default function UploadArtworkClient() {
                       onClick={() => {
                         setShowNewGallery(false);
                         setNewGalleryName('');
+                        setSelectedParentGallery('');
                       }}
                         className="admin-secondary-button"
                     >
@@ -351,26 +368,19 @@ export default function UploadArtworkClient() {
                 </div>
               ) : (
                   <div className="admin-gallery-selector">
-                  <select
-                      id="gallery"
+                  <NestedGallerySelect
                     value={selectedGallery}
-                    onChange={(e) => setSelectedGallery(e.target.value)}
-                      className="admin-form-select"
-                  >
-                    <option value="">No gallery</option>
-                    {galleries.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedGallery}
+                    galleries={galleries}
+                    placeholder="Select a gallery..."
+                  />
                   <button
                     type="button"
                     onClick={() => setShowNewGallery(true)}
                       className="admin-add-gallery-button"
-                      title="Create new gallery"
+                    title="Create new gallery"
                   >
-                      <FolderPlus size={20} />
+                    <FolderPlus size={20} />
                   </button>
                 </div>
               )}

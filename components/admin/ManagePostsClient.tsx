@@ -1,11 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import AdminLayout from './layout/AdminLayout';
 import PostsHeader from './posts/PostsHeader';
-import ArtworkGrid from './posts/ArtworkGrid';
+import UnifiedGrid from './posts/UnifiedGrid';
+import AdminGalleryBreadcrumbs from './posts/AdminGalleryBreadcrumbs';
+import EditableGalleryTitle from './posts/EditableGalleryTitle';
+import NewGalleryModal from './galleries/NewGalleryModal';
+import DeleteGalleryModal from './galleries/DeleteGalleryModal';
 import SearchBar from '@/components/SearchBar';
-import { ArtworkPost } from '@/types/database';
+import { ArtworkPost, Gallery } from '@/types/database';
 
 interface Toast {
   id: number;
@@ -14,9 +19,18 @@ interface Toast {
 }
 
 export default function ManagePostsClient() {
+  const searchParams = useSearchParams();
+  const galleryId = searchParams.get('gallery');
+  
   const [artworks, setArtworks] = useState<ArtworkPost[]>([]);
+  const [galleries, setGalleries] = useState<Gallery[]>([]);
+  const [currentGallery, setCurrentGallery] = useState<Gallery | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [showNewGalleryModal, setShowNewGalleryModal] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [galleryToDelete, setGalleryToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isDeletingGallery, setIsDeletingGallery] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();
@@ -24,10 +38,15 @@ export default function ManagePostsClient() {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   };
 
-  // Filter artworks by search query
-  const filteredArtworks = artworks.filter((artwork) =>
-    artwork.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const fetchGalleries = useCallback(async () => {
+    try {
+      const res = await fetch('/api/galleries?includeImages=true');
+      const data = await res.json();
+      setGalleries(data.galleries || []);
+    } catch {
+      console.error('Error fetching galleries');
+    }
+  }, []);
 
   const fetchArtworks = useCallback(async () => {
     try {
@@ -40,9 +59,113 @@ export default function ManagePostsClient() {
   }, []);
 
   useEffect(() => {
+    void fetchGalleries();
     void fetchArtworks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Set current gallery when galleryId changes
+  useEffect(() => {
+    if (galleryId && galleries.length > 0) {
+      const gallery = galleries.find((g) => g.id === galleryId);
+      setCurrentGallery(gallery || null);
+    } else {
+      setCurrentGallery(null);
+    }
+  }, [galleryId, galleries]);
+
+  // Get unified items (galleries + posts) sorted alphabetically
+  const unifiedItems = useMemo(() => {
+    type UnifiedItem = 
+      | { type: 'gallery'; data: Gallery & { previewImages?: string[] }; artworkCount: number; subfolderCount?: number; sortKey: string }
+      | { type: 'post'; data: ArtworkPost; sortKey: string };
+
+    const items: UnifiedItem[] = [];
+
+    // Get galleries to display
+    let displayGalleries: (Gallery & { previewImages?: string[] })[] = [];
+    if (!currentGallery) {
+      // Show root galleries
+      displayGalleries = galleries.filter((g) => !g.parent_id).map((g) => {
+        const galleryArtworks = artworks.filter((a) => a.gallery_id === g.id);
+        const previewImages = galleryArtworks
+          .flatMap((a) => a.images?.map((img) => img.image_url) || [])
+          .filter(Boolean)
+          .slice(0, 4);
+        return { ...g, previewImages };
+      });
+    } else {
+      // Show child galleries of current gallery
+      displayGalleries = galleries.filter((g) => g.parent_id === currentGallery.id).map((g) => {
+        const galleryArtworks = artworks.filter((a) => a.gallery_id === g.id);
+        const previewImages = galleryArtworks
+          .flatMap((a) => a.images?.map((img) => img.image_url) || [])
+          .filter(Boolean)
+          .slice(0, 4);
+        return { ...g, previewImages };
+      });
+    }
+
+    // Filter galleries by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      displayGalleries = displayGalleries.filter((gallery) =>
+        gallery.name.toLowerCase().includes(query)
+      );
+    }
+
+    // Add galleries to items
+    displayGalleries.forEach((gallery) => {
+      const artworkCount = artworks.filter((a) => a.gallery_id === gallery.id).length;
+      const subfolderCount = galleries.filter((g) => g.parent_id === gallery.id).length;
+      items.push({
+        type: 'gallery',
+        data: gallery,
+        artworkCount,
+        subfolderCount,
+        sortKey: gallery.name.toLowerCase(),
+      });
+    });
+
+    // Get artworks to display
+    let displayArtworks = artworks;
+    if (currentGallery) {
+      // Show only artworks directly in this gallery (not in sub-galleries)
+      displayArtworks = displayArtworks.filter((a) => a.gallery_id === currentGallery.id);
+    } else {
+      // Show artworks with no gallery (root posts)
+      displayArtworks = displayArtworks.filter((a) => !a.gallery_id);
+    }
+
+    // Filter artworks by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      displayArtworks = displayArtworks.filter((artwork) =>
+        artwork.title.toLowerCase().includes(query)
+      );
+    }
+
+    // Add posts to items
+    displayArtworks.forEach((artwork) => {
+      items.push({
+        type: 'post',
+        data: artwork,
+        sortKey: artwork.title.toLowerCase(),
+      });
+    });
+
+    // Sort: galleries first (alphabetically), then posts (alphabetically)
+    items.sort((a, b) => {
+      // If types are different, galleries come first
+      if (a.type !== b.type) {
+        return a.type === 'gallery' ? -1 : 1;
+      }
+      // If same type, sort alphabetically
+      return a.sortKey.localeCompare(b.sortKey);
+    });
+
+    return items;
+  }, [galleries, artworks, currentGallery, searchQuery]);
 
   const togglePin = async (id: string, currentPinned: boolean) => {
     try {
@@ -75,6 +198,167 @@ export default function ManagePostsClient() {
     }
   };
 
+  const handleCreateGallery = async (name: string, parentId: string | null) => {
+    const duplicate = galleries.find((g) => g.name.toLowerCase() === name.toLowerCase());
+    if (duplicate) {
+      showToast('A gallery with this name already exists', 'error');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/galleries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, parent_id: parentId }),
+      });
+
+      if (res.ok) {
+        await fetchGalleries();
+        setShowNewGalleryModal(false);
+        showToast('Gallery created!', 'success');
+      }
+    } catch {
+      showToast('Failed to create gallery', 'error');
+    }
+  };
+
+  const handleUpdateGalleryName = async (id: string, newName: string) => {
+    const duplicate = galleries.find(
+      (g) => g.id !== id && g.name.toLowerCase() === newName.toLowerCase()
+    );
+    if (duplicate) {
+      showToast('A gallery with this name already exists', 'error');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/galleries/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName }),
+      });
+
+      if (res.ok) {
+        await fetchGalleries();
+        // Update current gallery if it's the one being edited
+        if (currentGallery && currentGallery.id === id) {
+          setCurrentGallery({ ...currentGallery, name: newName });
+        }
+        showToast('Gallery updated!', 'success');
+      }
+    } catch {
+      showToast('Failed to update gallery', 'error');
+    }
+  };
+
+  // Recursively count artworks in a gallery and all its children
+  const getTotalArtworkCount = (galleryId: string): number => {
+    const directCount = artworks.filter((a) => a.gallery_id === galleryId).length;
+    const children = galleries.filter((g) => g.parent_id === galleryId);
+    const childrenCount = children.reduce((sum, child) => sum + getTotalArtworkCount(child.id), 0);
+    return directCount + childrenCount;
+  };
+
+  // Recursively count sub-galleries (including nested ones)
+  const getTotalSubGalleryCount = (galleryId: string): number => {
+    const directChildren = galleries.filter((g) => g.parent_id === galleryId);
+    let count = directChildren.length;
+    for (const child of directChildren) {
+      count += getTotalSubGalleryCount(child.id);
+    }
+    return count;
+  };
+
+  const handleDeleteGallery = (id: string, name: string) => {
+    setGalleryToDelete({ id, name });
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteGalleryConfirm = async () => {
+    if (!galleryToDelete) return;
+
+    setIsDeletingGallery(true);
+    try {
+      const res = await fetch(`/api/galleries/${galleryToDelete.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        await fetchGalleries();
+        await fetchArtworks();
+        showToast('Gallery deleted', 'success');
+        
+        // If we deleted the current gallery, navigate to parent or root
+        if (currentGallery && currentGallery.id === galleryToDelete.id) {
+          const parentGallery = currentGallery.parent_id 
+            ? galleries.find(g => g.id === currentGallery.parent_id)
+            : null;
+          
+          if (parentGallery) {
+            const params = new URLSearchParams();
+            params.set('gallery', parentGallery.id);
+            window.location.href = `/admin/posts?${params.toString()}`;
+          } else {
+            window.location.href = '/admin/posts';
+          }
+        }
+        
+        setDeleteModalOpen(false);
+        setGalleryToDelete(null);
+      } else {
+        const error = await res.json().catch(() => ({ error: 'Failed to delete gallery' }));
+        showToast(error.error || 'Failed to delete gallery', 'error');
+      }
+    } catch {
+      showToast('Failed to delete gallery', 'error');
+    } finally {
+      setIsDeletingGallery(false);
+    }
+  };
+
+  const handleMoveItem = async (itemId: string, itemType: 'gallery' | 'post', targetGalleryId: string | null) => {
+    try {
+      if (itemType === 'post') {
+        // Move post to gallery
+        const res = await fetch(`/api/artwork/${itemId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gallery_id: targetGalleryId }),
+        });
+
+        if (res.ok) {
+          await fetchArtworks();
+          showToast('Post moved successfully', 'success');
+        } else {
+          showToast('Failed to move post', 'error');
+        }
+      } else {
+        // Move gallery to another gallery (nest it)
+        const res = await fetch(`/api/galleries/${itemId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ parent_id: targetGalleryId }),
+        });
+
+        if (res.ok) {
+          await fetchGalleries();
+          showToast('Gallery moved successfully', 'success');
+          // If we moved the current gallery, update the URL
+          if (currentGallery && currentGallery.id === itemId) {
+            if (targetGalleryId) {
+              const params = new URLSearchParams();
+              params.set('gallery', targetGalleryId);
+              window.location.href = `/admin/posts?${params.toString()}`;
+            } else {
+              window.location.href = '/admin/posts';
+            }
+          }
+        } else {
+          showToast('Failed to move gallery', 'error');
+        }
+      }
+    } catch {
+      showToast('Failed to move item', 'error');
+    }
+  };
+
   return (
     <AdminLayout>
       {/* Toast Container */}
@@ -90,27 +374,78 @@ export default function ManagePostsClient() {
       </div>
 
       <div className="admin-page-container">
-        <PostsHeader />
+        <PostsHeader onCreateGallery={() => setShowNewGalleryModal(true)} />
+        
+        {/* Breadcrumbs */}
+        <Suspense fallback={<div className="admin-breadcrumbs">Loading...</div>}>
+          <AdminGalleryBreadcrumbs gallery={currentGallery} allGalleries={galleries} />
+        </Suspense>
+
+        {/* Gallery Title with Edit */}
+        {currentGallery && (
+          <EditableGalleryTitle
+            name={currentGallery.name}
+            galleryId={currentGallery.id}
+            onUpdate={handleUpdateGalleryName}
+          />
+        )}
         
         <SearchBar
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search by antique ..."
+          placeholder="Search by antique or gallery name..."
           className="admin-search"
         />
 
-        {filteredArtworks.length === 0 && searchQuery ? (
-          <div className="admin-empty-state">
-            <p>No antiques found matching &quot;{searchQuery}&quot;</p>
-          </div>
-        ) : (
-          <ArtworkGrid
-            artworks={filteredArtworks}
+        {/* Unified Grid - Galleries and Posts together */}
+        {unifiedItems.length > 0 ? (
+          <UnifiedGrid
+            items={unifiedItems}
             onTogglePin={togglePin}
             onDelete={deleteArtwork}
+            onDeleteGallery={handleDeleteGallery}
+            onUpdateGalleryName={handleUpdateGalleryName}
+            onMoveItem={handleMoveItem}
+            galleries={galleries}
+            currentGalleryId={currentGallery?.id || null}
           />
+        ) : (
+          <div className="admin-empty-state">
+            <p>
+              {searchQuery 
+                ? `No items found matching "${searchQuery}"`
+                : currentGallery 
+                  ? 'This gallery is empty. Create posts or sub-galleries.'
+                  : 'No galleries or posts yet. Create your first one!'}
+            </p>
+          </div>
         )}
         </div>
+
+        {/* New Gallery Modal */}
+        <NewGalleryModal
+          isOpen={showNewGalleryModal}
+          onClose={() => setShowNewGalleryModal(false)}
+          onCreate={handleCreateGallery}
+          parentId={currentGallery?.id || null}
+          galleries={galleries}
+        />
+
+        {/* Delete Gallery Modal */}
+        {galleryToDelete && (
+          <DeleteGalleryModal
+            isOpen={deleteModalOpen}
+            onClose={() => {
+              setDeleteModalOpen(false);
+              setGalleryToDelete(null);
+            }}
+            onConfirm={handleDeleteGalleryConfirm}
+            galleryName={galleryToDelete.name}
+            artworkCount={getTotalArtworkCount(galleryToDelete.id)}
+            subGalleryCount={getTotalSubGalleryCount(galleryToDelete.id)}
+            isDeleting={isDeletingGallery}
+          />
+        )}
     </AdminLayout>
   );
 }

@@ -1,24 +1,38 @@
 'use client';
 
-import { Plus } from 'lucide-react';
+import { Plus, FolderPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-export default function PostsHeader() {
+interface PostsHeaderProps {
+  onCreateGallery?: () => void;
+}
+
+export default function PostsHeader({ onCreateGallery }: PostsHeaderProps) {
   const router = useRouter();
 
   return (
     <div className="admin-page-header">
       <div>
-        <h1 className="admin-page-title">Manage Posts</h1>
-        <p className="admin-page-subtitle">View and manage all antique postings</p>
+        <h1 className="admin-page-title">Home</h1>
       </div>
-      <button
-        onClick={() => router.push('/admin/posts/new')}
-        className="admin-primary-button"
-      >
-        <Plus size={20} />
-        <span>Upload</span>
-      </button>
+      <div className="admin-header-actions">
+        {onCreateGallery && (
+          <button
+            onClick={onCreateGallery}
+            className="admin-secondary-button"
+          >
+            <FolderPlus size={18} />
+            <span>New Gallery</span>
+          </button>
+        )}
+        <button
+          onClick={() => router.push('/admin/posts/new')}
+          className="admin-primary-button"
+        >
+          <Plus size={18} />
+          <span>Upload Post</span>
+        </button>
+      </div>
     </div>
   );
 }

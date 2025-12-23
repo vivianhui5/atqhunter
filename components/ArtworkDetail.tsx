@@ -192,7 +192,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
               className="inquire-button"
             >
               <Mail size={20} />
-              Inquire About This Piece
+              Contact
             </button>
 
             {/* Separator */}

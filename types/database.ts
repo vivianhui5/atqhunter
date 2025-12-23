@@ -1,7 +1,10 @@
 export interface Gallery {
   id: string;
   name: string;
+  parent_id: string | null;
   created_at: string;
+  children?: Gallery[];
+  path?: string; // Full path like "Parent > Child > Grandchild"
 }
 
 export interface ArtworkPost {

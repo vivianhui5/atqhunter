@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import AdminLayout from './layout/AdminLayout';
 import SearchBar from '@/components/SearchBar';
 import { ArtworkPost } from '@/types/database';
-import { Pin, PinOff, Loader2, X } from 'lucide-react';
+import { Pin, PinOff, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -159,6 +159,8 @@ export default function ManageFeaturedClient() {
                       >
                         <h3 className="admin-featured-title">{artwork.title}</h3>
                       </Link>
+                    </div>
+                    <div className="admin-featured-actions">
                       <button
                         onClick={() => handleTogglePin(artwork.id, true)}
                         className="admin-featured-remove-button"
@@ -244,7 +246,7 @@ export default function ManageFeaturedClient() {
                 </div>
               ) : (
                 <div className="admin-empty-state">
-                  <p>No antiques found matching "{searchQuery}"</p>
+                  <p>No antiques found matching &ldquo;{searchQuery}&rdquo;</p>
                 </div>
               )}
             </div>

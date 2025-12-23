@@ -9,6 +9,7 @@ import {
 import RichTextEditor from './RichTextEditor';
 import Image from 'next/image';
 import { Gallery, ArtworkPost } from '@/types/database';
+import DeleteGalleryModal from './admin/galleries/DeleteGalleryModal';
 
 interface ImageFile {
   file: File;
@@ -43,6 +44,9 @@ export default function AdminDashboard() {
   const [moveToGallery, setMoveToGallery] = useState('');
   const [editingGalleryId, setEditingGalleryId] = useState<string | null>(null);
   const [editingGalleryName, setEditingGalleryName] = useState('');
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [galleryToDelete, setGalleryToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isDeletingGallery, setIsDeletingGallery] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper function to strip HTML tags from description
@@ -264,24 +268,56 @@ export default function AdminDashboard() {
     clearAllImages();
   };
 
-  const deleteGallery = async (id: string, name: string) => {
-    if (!confirm(`Delete gallery "${name}"? All artworks in this gallery will have their gallery removed.`)) return;
+  // Recursively count artworks in a gallery and all its children
+  const getTotalArtworkCount = (galleryId: string): number => {
+    const directCount = artworks.filter((a) => a.gallery_id === galleryId).length;
+    const children = galleries.filter((g) => g.parent_id === galleryId);
+    const childrenCount = children.reduce((sum, child) => sum + getTotalArtworkCount(child.id), 0);
+    return directCount + childrenCount;
+  };
+
+  // Recursively count sub-galleries (including nested ones)
+  const getTotalSubGalleryCount = (galleryId: string): number => {
+    const directChildren = galleries.filter((g) => g.parent_id === galleryId);
+    let count = directChildren.length;
+    for (const child of directChildren) {
+      count += getTotalSubGalleryCount(child.id);
+    }
+    return count;
+  };
+
+  const handleDeleteClick = (id: string, name: string) => {
+    setGalleryToDelete({ id, name });
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!galleryToDelete) return;
+
+    setIsDeletingGallery(true);
     try {
-      const res = await fetch(`/api/galleries/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/galleries/${galleryToDelete.id}`, { method: 'DELETE' });
       if (res.ok) {
-        setGalleries(galleries.filter(g => g.id !== id));
+        setGalleries(galleries.filter(g => g.id !== galleryToDelete.id));
         fetchArtworks(); // Refresh artworks to reflect gallery changes
         showToast('Gallery deleted', 'success');
-        if (selectedGalleryView === id) {
+        if (selectedGalleryView === galleryToDelete.id) {
           setSelectedGalleryView(null);
         }
+        setDeleteModalOpen(false);
+        setGalleryToDelete(null);
       } else {
-        showToast('Failed to delete gallery', 'error');
+        const error = await res.json().catch(() => ({ error: 'Failed to delete gallery' }));
+        showToast(error.error || 'Failed to delete gallery', 'error');
       }
     } catch {
       showToast('Failed to delete gallery', 'error');
+    } finally {
+      setIsDeletingGallery(false);
     }
   };
+
+  const deleteGallery = handleDeleteClick; // Keep for backward compatibility
 
   const toggleArtworkSelection = (id: string) => {
     const newSelection = new Set(selectedArtworks);
@@ -457,7 +493,7 @@ export default function AdminDashboard() {
                   className="flex-1 px-6 py-6 text-xl bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition"
                   aria-label="Select gallery"
                 >
-                  <option value="">No gallery</option>
+                  <option value="">Main/No gallery</option>
                   {galleries.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>
                 <button type="button" onClick={() => setShowNewGallery(true)} className="px-6 py-6 text-blue-600 font-medium hover:bg-blue-50 rounded-xl transition flex items-center gap-2" aria-label="Create new gallery">
@@ -785,7 +821,7 @@ export default function AdminDashboard() {
                         aria-label="Select destination gallery"
                       >
                         <option value="">Move to...</option>
-                        <option value="none">No Gallery</option>
+                        <option value="none">Main/No gallery</option>
                         {galleries.filter(g => g.id !== selectedGalleryView).map((g) => (
                           <option key={g.id} value={g.id}>{g.name}</option>
                         ))}
@@ -994,6 +1030,22 @@ export default function AdminDashboard() {
           )}
         </div>
         </main>
+      )}
+
+      {/* Delete Gallery Modal */}
+      {galleryToDelete && (
+        <DeleteGalleryModal
+          isOpen={deleteModalOpen}
+          onClose={() => {
+            setDeleteModalOpen(false);
+            setGalleryToDelete(null);
+          }}
+          onConfirm={handleDeleteConfirm}
+          galleryName={galleryToDelete.name}
+          artworkCount={getTotalArtworkCount(galleryToDelete.id)}
+          subGalleryCount={getTotalSubGalleryCount(galleryToDelete.id)}
+          isDeleting={isDeletingGallery}
+        />
       )}
     </div>
   );

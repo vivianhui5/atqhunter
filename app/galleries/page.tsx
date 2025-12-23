@@ -8,20 +8,32 @@ import { Gallery } from '@/types/database';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-async function getGalleries() {
-  const { data: galleries, error } = await supabase
+async function getGalleries(parentId: string | null = null) {
+  // Only fetch root galleries (where parent_id is null) for the main page
+  const query = supabase
     .from('galleries')
     .select('*')
     .order('created_at', { ascending: false });
+
+  if (parentId === null) {
+    // Get root galleries only
+    query.is('parent_id', null);
+  } else {
+    // Get children of a specific parent
+    query.eq('parent_id', parentId);
+  }
+
+  const { data: galleries, error } = await query;
 
   if (error) {
     console.error('Error fetching galleries:', error);
     return [];
   }
 
-  // Fetch preview images for each gallery (first 4 images)
-  const galleriesWithImages = await Promise.all(
+  // Fetch preview images, subfolder count, and artwork count for each gallery
+  const galleriesWithData = await Promise.all(
     (galleries || []).map(async (gallery) => {
+      // Get preview images from artworks directly in this gallery
       const { data: artworks } = await supabase
         .from('artwork_posts')
         .select('images:artwork_images(image_url)')
@@ -33,11 +45,28 @@ async function getGalleries() {
         .filter(Boolean)
         .slice(0, 4) || [];
 
-      return { ...gallery, previewImages };
+      // Get subfolder count
+      const { count: subfolderCount } = await supabase
+        .from('galleries')
+        .select('*', { count: 'exact', head: true })
+        .eq('parent_id', gallery.id);
+
+      // Get artwork count
+      const { count: artworkCount } = await supabase
+        .from('artwork_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('gallery_id', gallery.id);
+
+      return { 
+        ...gallery, 
+        previewImages,
+        subfolderCount: subfolderCount || 0,
+        artworkCount: artworkCount || 0
+      };
     })
   );
 
-  return galleriesWithImages;
+  return galleriesWithData;
 }
 
 export default async function GalleriesPage() {
@@ -49,10 +78,15 @@ export default async function GalleriesPage() {
       
       <main className="galleries-content">
         <PageHeader 
-          title="Galleries"
-          description="Explore thoughtfully curated galleries."
+          description="Browse through curated galleries."
         />
-        <GalleryGrid galleries={galleries} />
+        {galleries.length === 0 ? (
+          <div className="empty-state">
+            <p>No galleries available yet</p>
+          </div>
+        ) : (
+          <GalleryGrid galleries={galleries} />
+        )}
       </main>
 
       <Footer />
