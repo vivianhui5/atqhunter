@@ -36,11 +36,21 @@ export default function UploadArtworkClient() {
   const [creatingGallery, setCreatingGallery] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const isSubmittingRef = useRef(false);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
+    // Prevent duplicate toasts with the same message
+    setToasts((prev) => {
+      const isDuplicate = prev.some((t) => t.message === message && t.type === type);
+      if (isDuplicate) return prev;
+      
+      const id = Date.now();
+      const newToast = { id, message, type };
+      setTimeout(() => {
+        setToasts((current) => current.filter((t) => t.id !== id));
+      }, 3500);
+      return [...prev, newToast];
+    });
   };
 
   useEffect(() => {
@@ -202,18 +212,19 @@ export default function UploadArtworkClient() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || imageFiles.length === 0) return;
-
+    
+    // Prevent double submission
+    if (isSubmittingRef.current || loading) return;
+    isSubmittingRef.current = true;
     setLoading(true);
 
     try {
       // Step 1: Upload all images directly to R2
-      showToast('Uploading images...', 'info');
       const imageUrls = await Promise.all(
         imageFiles.map((img) => uploadImageToR2(img.file, img.file.name))
       );
 
       // Step 2: Send metadata and image URLs to API
-      showToast('Saving artwork...', 'info');
       const res = await fetch('/api/artwork/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -241,6 +252,7 @@ export default function UploadArtworkClient() {
       console.error('Upload error:', err);
     } finally {
       setLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 
