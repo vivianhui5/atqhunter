@@ -14,7 +14,6 @@ interface AdminGalleryCardProps {
   onUpdateName?: (id: string, newName: string) => Promise<void>;
   onDelete?: (id: string, name: string) => void;
   onManagePassword?: (id: string, name: string, currentPassword: string | null) => void;
-  allGalleries?: Gallery[];
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   onDrop?: (e: React.DragEvent) => void;
@@ -29,7 +28,6 @@ export default function AdminGalleryCard({
   onUpdateName,
   onDelete,
   onManagePassword,
-  allGalleries = [],
   draggable = false,
   onDragStart,
   onDrop,

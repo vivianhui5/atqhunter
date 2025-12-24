@@ -351,7 +351,7 @@ export default function UploadArtworkClient() {
                       value={selectedParentGallery}
                       onChange={setSelectedParentGallery}
                       galleries={galleries}
-                      placeholder="Main/No gallery"
+                      placeholder="Parent Gallery"
                     />
                   </div>
                   <div style={{ marginTop: '0.75rem' }}>

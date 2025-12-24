@@ -140,7 +140,7 @@ export default function NestedGallerySelect({
               setIsOpen(false);
             }}
           >
-            <span className={value === '' ? 'selected' : ''}>Main/No gallery</span>
+            <span className={value === '' ? 'selected' : ''}>{placeholder || 'Main/No gallery'}</span>
           </div>
           {tree.map((node) => renderTreeNode(node))}
         </div>

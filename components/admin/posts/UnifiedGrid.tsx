@@ -136,7 +136,6 @@ export default function UnifiedGrid({
               onUpdateName={onUpdateGalleryName}
               onDelete={onDeleteGallery}
               onManagePassword={onManageGalleryPassword}
-              allGalleries={allGalleries}
               draggable={!!onMoveItem}
               onDragStart={(e) => {
                 if (onMoveItem) {

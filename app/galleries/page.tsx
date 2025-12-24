@@ -3,6 +3,7 @@ import Navbar from '@/components/navbar/Navbar';
 import Footer from '@/components/Footer';
 import PageHeader from '@/components/galleries/PageHeader';
 import GalleryGrid from '@/components/galleries/GalleryGrid';
+import { Gallery } from '@/types/database';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

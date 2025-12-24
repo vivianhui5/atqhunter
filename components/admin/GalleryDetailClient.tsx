@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Image as ImageIcon, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import AdminLayout from './layout/AdminLayout';
