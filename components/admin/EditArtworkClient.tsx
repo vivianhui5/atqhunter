@@ -507,21 +507,21 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
               ) : (
                 <>
                   <div className="admin-gallery-selector">
-                    <NestedGallerySelect
-                      value={selectedGallery}
-                      onChange={setSelectedGallery}
-                      galleries={galleries}
-                      placeholder="Select a gallery..."
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewGallery(true)}
+                  <NestedGallerySelect
+                    value={selectedGallery}
+                    onChange={setSelectedGallery}
+                    galleries={galleries}
+                    placeholder="Select a gallery..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewGallery(true)}
                       className="admin-add-gallery-button"
                       title="Create new gallery"
-                    >
+                  >
                       <FolderPlus size={20} />
-                    </button>
-                  </div>
+                  </button>
+                </div>
                   {selectedGallery && isGalleryProtected && (
                     <div style={{ 
                       marginTop: '0.75rem', 

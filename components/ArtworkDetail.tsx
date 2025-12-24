@@ -107,7 +107,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
           return (
             <Link href={backHref} className="breadcrumb">
               {backText}
-            </Link>
+        </Link>
           );
         })()}
 

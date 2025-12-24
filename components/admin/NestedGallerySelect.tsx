@@ -24,6 +24,7 @@ export default function NestedGallerySelect({
 }: NestedGallerySelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [hasInteracted, setHasInteracted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const tree = buildGalleryTree(galleries) as unknown as GalleryTreeNode[];
@@ -57,9 +58,13 @@ export default function NestedGallerySelect({
   };
 
   const getSelectedGalleryName = () => {
-    if (!value) return placeholder;
+    if (!value) {
+      // If user has interacted and selected "None", show "None"
+      // Otherwise show placeholder (initial state)
+      return hasInteracted ? 'None' : (placeholder || 'Select a gallery...');
+    }
     const gallery = galleries.find((g) => g.id === value);
-    return gallery?.name || placeholder;
+    return gallery?.name || placeholder || 'Select a gallery...';
   };
 
   const renderTreeNode = (node: GalleryTreeNode, level: number = 0): React.ReactNode => {
@@ -82,6 +87,7 @@ export default function NestedGallerySelect({
               toggleNode(node.id);
             } else {
               onChange(node.id);
+              setHasInteracted(true);
               setIsOpen(false);
             }
           }}
@@ -137,10 +143,11 @@ export default function NestedGallerySelect({
             className="nested-select-option"
             onClick={() => {
               onChange('');
+              setHasInteracted(true);
               setIsOpen(false);
             }}
           >
-            <span className={value === '' ? 'selected' : ''}>{placeholder || 'Main/No gallery'}</span>
+            <span className={value === '' && hasInteracted ? 'selected' : ''}>None</span>
           </div>
           {tree.map((node) => renderTreeNode(node))}
         </div>

@@ -49,22 +49,22 @@ export default function ArtworkCard({ artwork, allGalleries = [], parentUnlocked
       {/* Image - Clickable to artwork detail */}
       <div style={{ position: 'relative' }}>
         <Link href={artworkUrl} className="artwork-card-image-link">
-          {firstImage ? (
-            <div className="artwork-card-image">
-            <Image
-              src={firstImage.image_url}
-              alt={artwork.title}
-              fill
-                className="image-content"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            />
-            </div>
-          ) : (
-            <div className="artwork-card-image-empty">
-              <span>No Image</span>
-            </div>
-          )}
-        </Link>
+        {firstImage ? (
+          <div className="artwork-card-image">
+          <Image
+            src={firstImage.image_url}
+            alt={artwork.title}
+            fill
+              className="image-content"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+          </div>
+        ) : (
+          <div className="artwork-card-image-empty">
+            <span>No Image</span>
+          </div>
+        )}
+      </Link>
         
         {/* Password Protection Overlay - only covers image area */}
         {showLockOverlay && (

@@ -144,7 +144,7 @@ export default async function GalleryPage({ params }: { params: Promise<{ id: st
             allGalleries={allGalleries}
             childGalleries={childGalleries}
             artworks={artworks}
-            previewImages={previewImages}
+          previewImages={previewImages}
           />
         </Suspense>
       </main>

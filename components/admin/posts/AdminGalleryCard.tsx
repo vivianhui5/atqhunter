@@ -122,13 +122,13 @@ export default function AdminGalleryCard({
         {!isEditing && (
           <div className="admin-gallery-card-actions-overlay">
             {onUpdateName && (
-              <button
-                onClick={handleEditClick}
+          <button
+            onClick={handleEditClick}
                 className="admin-gallery-card-action-button"
-                title="Edit gallery name"
-              >
-                <Edit2 size={16} />
-              </button>
+            title="Edit gallery name"
+          >
+            <Edit2 size={16} />
+          </button>
             )}
             {onManagePassword && (
               <button

@@ -51,29 +51,29 @@ export default function GalleryCard({ gallery, allGalleries = [], parentUnlocked
     <Link href={galleryUrl} className="gallery-card" style={{ position: 'relative' }}>
       {/* Image Preview Grid */}
       <div style={{ position: 'relative' }}>
-        {previewImages.length > 0 ? (
-          <div className="gallery-preview-grid">
-            {previewImages.slice(0, 4).map((imageUrl, index) => (
-              <div key={index} className="gallery-preview-image">
-                <Image
-                  src={imageUrl}
-                  alt={`${gallery.name} preview ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 50vw, 25vw"
-                />
-              </div>
-            ))}
-            {/* Fill empty slots with placeholder */}
-            {Array.from({ length: 4 - previewImages.length }).map((_, index) => (
-              <div key={`empty-${index}`} className="gallery-preview-empty" />
-            ))}
-          </div>
-        ) : (
-          <div className="gallery-preview-empty-all">
-            <span>None</span>
-          </div>
-        )}
+      {previewImages.length > 0 ? (
+        <div className="gallery-preview-grid">
+          {previewImages.slice(0, 4).map((imageUrl, index) => (
+            <div key={index} className="gallery-preview-image">
+              <Image
+                src={imageUrl}
+                alt={`${gallery.name} preview ${index + 1}`}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 50vw, 25vw"
+              />
+            </div>
+          ))}
+          {/* Fill empty slots with placeholder */}
+          {Array.from({ length: 4 - previewImages.length }).map((_, index) => (
+            <div key={`empty-${index}`} className="gallery-preview-empty" />
+          ))}
+        </div>
+      ) : (
+        <div className="gallery-preview-empty-all">
+          <span>None</span>
+        </div>
+      )}
 
         {/* Password Protection Overlay - only covers image area */}
         {showLockOverlay && (
