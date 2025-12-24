@@ -116,3 +116,125 @@ export function wouldCreateCircularReference(
   return ancestors.includes(galleryId);
 }
 
+/**
+ * Get the effective password for a gallery (checks parent chain for inheritance)
+ */
+export function getEffectivePassword(gallery: Gallery, allGalleries: Gallery[]): string | null {
+  // If gallery has its own password, use it
+  if (gallery.password) {
+    return gallery.password;
+  }
+
+  // Otherwise, check parent chain
+  let currentParentId = gallery.parent_id;
+  while (currentParentId) {
+    const parent = allGalleries.find((g) => g.id === currentParentId);
+    if (!parent) break;
+    
+    if (parent.password) {
+      return parent.password;
+    }
+    
+    currentParentId = parent.parent_id;
+  }
+
+  return null;
+}
+
+/**
+ * Check if a gallery is password protected (either directly or through inheritance)
+ */
+export function isGalleryPasswordProtected(gallery: Gallery, allGalleries: Gallery[]): boolean {
+  return getEffectivePassword(gallery, allGalleries) !== null;
+}
+
+/**
+ * Get the effective password for an artwork post (checks gallery and parent chain)
+ */
+export function getEffectivePasswordForPost(
+  post: { gallery_id: string | null; password: string | null },
+  allGalleries: Gallery[]
+): string | null {
+  // If post has its own password, use it
+  if (post.password) {
+    return post.password;
+  }
+
+  // Otherwise, check gallery and its parent chain
+  if (post.gallery_id) {
+    const gallery = allGalleries.find((g) => g.id === post.gallery_id);
+    if (gallery) {
+      return getEffectivePassword(gallery, allGalleries);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check if an artwork post is password protected
+ */
+export function isPostPasswordProtected(
+  post: { gallery_id: string | null; password: string | null },
+  allGalleries: Gallery[]
+): boolean {
+  return getEffectivePasswordForPost(post, allGalleries) !== null;
+}
+
+/**
+ * Check if a gallery or any of its ancestors is unlocked in session storage
+ * This is used to determine if a child gallery/post should be accessible
+ */
+export function isAnyAncestorUnlocked(
+  galleryId: string | null,
+  allGalleries: Gallery[]
+): boolean {
+  if (!galleryId || typeof window === 'undefined') return false;
+  
+  // First check the gallery itself
+  const gallery = allGalleries.find((g) => g.id === galleryId);
+  if (!gallery) return false;
+  
+  // Check this gallery and all ancestors
+  let currentId: string | null = galleryId;
+  while (currentId) {
+    const sessionKey = `gallery_unlocked_${currentId}`;
+    if (sessionStorage.getItem(sessionKey) === 'true') {
+      return true;
+    }
+    
+    const currentGallery = allGalleries.find((g) => g.id === currentId);
+    if (!currentGallery?.parent_id) break;
+    currentId = currentGallery.parent_id;
+  }
+  
+  return false;
+}
+
+/**
+ * Get all descendant gallery IDs that inherit password from parent (for unlocking when parent is unlocked)
+ * Only includes galleries that don't have their own password
+ */
+export function getInheritingDescendantIds(galleryId: string, allGalleries: Gallery[]): string[] {
+  const descendants: string[] = [];
+  const children = allGalleries.filter((g) => g.parent_id === galleryId);
+  
+  for (const child of children) {
+    // Only include if child doesn't have its own password (inherits from parent)
+    if (!child.password || child.password.length === 0) {
+      descendants.push(child.id);
+      // Recursively get descendants that also inherit
+      descendants.push(...getInheritingDescendantIds(child.id, allGalleries));
+    }
+  }
+  
+  return descendants;
+}
+
+/**
+ * Check if a gallery has its own password (not inherited)
+ */
+export function hasOwnPassword(gallery: Gallery): boolean {
+  return gallery.password !== null && gallery.password.length > 0;
+}
+

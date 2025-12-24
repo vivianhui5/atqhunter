@@ -2,6 +2,8 @@ export interface Gallery {
   id: string;
   name: string;
   parent_id: string | null;
+  password: string | null;
+  password_protected?: boolean;
   created_at: string;
   children?: Gallery[];
   path?: string; // Full path like "Parent > Child > Grandchild"
@@ -13,6 +15,8 @@ export interface ArtworkPost {
   description: string | null;
   price: number | null;
   gallery_id: string | null;
+  password: string | null;
+  password_protected?: boolean;
   is_pinned: boolean;
   created_at: string;
   updated_at: string;

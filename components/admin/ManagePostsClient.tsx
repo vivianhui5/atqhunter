@@ -9,6 +9,7 @@ import AdminGalleryBreadcrumbs from './posts/AdminGalleryBreadcrumbs';
 import EditableGalleryTitle from './posts/EditableGalleryTitle';
 import NewGalleryModal from './galleries/NewGalleryModal';
 import DeleteGalleryModal from './galleries/DeleteGalleryModal';
+import PasswordModal from './galleries/PasswordModal';
 import SearchBar from '@/components/SearchBar';
 import { ArtworkPost, Gallery } from '@/types/database';
 
@@ -31,6 +32,10 @@ export default function ManagePostsClient() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [galleryToDelete, setGalleryToDelete] = useState<{ id: string; name: string } | null>(null);
   const [isDeletingGallery, setIsDeletingGallery] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [galleryForPassword, setGalleryForPassword] = useState<{ id: string; name: string; currentPassword: string | null } | null>(null);
+  const [postForPassword, setPostForPassword] = useState<{ id: string; title: string; currentPassword: string | null } | null>(null);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();
@@ -198,7 +203,7 @@ export default function ManagePostsClient() {
     }
   };
 
-  const handleCreateGallery = async (name: string, parentId: string | null) => {
+  const handleCreateGallery = async (name: string, parentId: string | null, password: string | null) => {
     const duplicate = galleries.find((g) => g.name.toLowerCase() === name.toLowerCase());
     if (duplicate) {
       showToast('A gallery with this name already exists', 'error');
@@ -209,7 +214,7 @@ export default function ManagePostsClient() {
       const res = await fetch('/api/galleries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, parent_id: parentId }),
+        body: JSON.stringify({ name, parent_id: parentId, password }),
       });
 
       if (res.ok) {
@@ -272,6 +277,62 @@ export default function ManagePostsClient() {
   const handleDeleteGallery = (id: string, name: string) => {
     setGalleryToDelete({ id, name });
     setDeleteModalOpen(true);
+  };
+
+  const handleManagePassword = (id: string, name: string, currentPassword: string | null) => {
+    setGalleryForPassword({ id, name, currentPassword });
+    setPasswordModalOpen(true);
+  };
+
+  const handleSavePassword = async (password: string | null) => {
+    if (!galleryForPassword && !postForPassword) return;
+
+    setIsSavingPassword(true);
+    try {
+      let res;
+      if (galleryForPassword) {
+        res = await fetch(`/api/galleries/${galleryForPassword.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+      } else if (postForPassword) {
+        res = await fetch(`/api/artwork/${postForPassword.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+      } else {
+        return;
+      }
+
+      if (res.ok) {
+        if (galleryForPassword) {
+          await fetchGalleries();
+        } else {
+          await fetchArtworks();
+        }
+        showToast(password ? 'Password set successfully' : 'Password removed successfully', 'success');
+        setPasswordModalOpen(false);
+        setGalleryForPassword(null);
+        setPostForPassword(null);
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to update password' }));
+        console.error('Failed to update password:', errorData);
+        showToast(errorData.error || 'Failed to update password', 'error');
+      }
+    } catch (err) {
+      console.error('Error updating password:', err);
+      showToast('Failed to update password', 'error');
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
+
+  const handleManagePostPassword = (id: string, title: string, currentPassword: string | null) => {
+    setPostForPassword({ id, title, currentPassword });
+    setGalleryForPassword(null);
+    setPasswordModalOpen(true);
   };
 
   const handleDeleteGalleryConfirm = async () => {
@@ -405,6 +466,8 @@ export default function ManagePostsClient() {
             onDelete={deleteArtwork}
             onDeleteGallery={handleDeleteGallery}
             onUpdateGalleryName={handleUpdateGalleryName}
+            onManageGalleryPassword={handleManagePassword}
+            onManagePostPassword={handleManagePostPassword}
             onMoveItem={handleMoveItem}
             galleries={galleries}
             currentGalleryId={currentGallery?.id || null}
@@ -444,6 +507,22 @@ export default function ManagePostsClient() {
             artworkCount={getTotalArtworkCount(galleryToDelete.id)}
             subGalleryCount={getTotalSubGalleryCount(galleryToDelete.id)}
             isDeleting={isDeletingGallery}
+          />
+        )}
+
+        {/* Password Modal */}
+        {(galleryForPassword || postForPassword) && (
+          <PasswordModal
+            isOpen={passwordModalOpen}
+            onClose={() => {
+              setPasswordModalOpen(false);
+              setGalleryForPassword(null);
+              setPostForPassword(null);
+            }}
+            onSave={handleSavePassword}
+            currentPassword={galleryForPassword?.currentPassword || postForPassword?.currentPassword || null}
+            galleryName={galleryForPassword?.name || postForPassword?.title || ''}
+            isSaving={isSavingPassword}
           />
         )}
     </AdminLayout>

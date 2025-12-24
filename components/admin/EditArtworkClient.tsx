@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import AdminLayout from './layout/AdminLayout';
 import { Gallery } from '@/types/database';
-import { flattenGalleryTree, buildGalleryTree } from '@/lib/gallery-utils';
+import { isGalleryPasswordProtected } from '@/lib/gallery-utils';
 import NestedGallerySelect from './NestedGallerySelect';
 
 interface Toast {
@@ -38,6 +38,7 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
   const [price, setPrice] = useState('');
   const [selectedGallery, setSelectedGallery] = useState('');
   const [isPinned, setIsPinned] = useState(false);
+  const [password, setPassword] = useState('');
   const [galleries, setGalleries] = useState<Gallery[]>([]);
   const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -80,9 +81,6 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
     }
   };
 
-  // Build hierarchical gallery list for dropdown
-  const galleryTree = buildGalleryTree(galleries);
-  const flatGalleryList = flattenGalleryTree(galleryTree);
 
   const fetchArtwork = async () => {
     try {
@@ -108,6 +106,7 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
       setPrice(data.artwork.price?.toString() || '');
       setSelectedGallery(data.artwork.gallery_id || '');
       setIsPinned(data.artwork.is_pinned);
+      setPassword(data.artwork.password || '');
       
       // Load existing images
       if (data.artwork.images) {
@@ -388,6 +387,7 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
           price: price ? parseFloat(price) : null,
           gallery_id: selectedGallery || null,
           is_pinned: isPinned,
+          password: password.trim() || null,
         }),
       });
 
@@ -415,6 +415,10 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
       </AdminLayout>
     );
   }
+
+  // Check if selected gallery is password protected
+  const selectedGalleryObj = selectedGallery ? galleries.find(g => g.id === selectedGallery) : null;
+  const isGalleryProtected = selectedGalleryObj ? isGalleryPasswordProtected(selectedGalleryObj, galleries) : false;
 
   return (
     <AdminLayout>
@@ -501,22 +505,37 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
                   </div>
                 </div>
               ) : (
+                <>
                   <div className="admin-gallery-selector">
-                  <NestedGallerySelect
-                    value={selectedGallery}
-                    onChange={setSelectedGallery}
-                    galleries={galleries}
-                    placeholder="Select a gallery..."
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewGallery(true)}
+                    <NestedGallerySelect
+                      value={selectedGallery}
+                      onChange={setSelectedGallery}
+                      galleries={galleries}
+                      placeholder="Select a gallery..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewGallery(true)}
                       className="admin-add-gallery-button"
                       title="Create new gallery"
-                  >
+                    >
                       <FolderPlus size={20} />
-                  </button>
-                </div>
+                    </button>
+                  </div>
+                  {selectedGallery && isGalleryProtected && (
+                    <div style={{ 
+                      marginTop: '0.75rem', 
+                      padding: '0.75rem', 
+                      background: '#FEF3C7', 
+                      border: '1px solid #FCD34D', 
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      color: '#92400E'
+                    }}>
+                      <strong>⚠️ Password Protected:</strong> This gallery is password protected. The post will inherit this protection.
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -667,6 +686,24 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
           <div className="admin-form-section">
             <label htmlFor="description" className="admin-form-label">Description</label>
             <RichTextEditor content={description} onChange={setDescription} />
+          </div>
+
+          {/* Password Protection */}
+          <div className="admin-form-section">
+            <label htmlFor="password" className="admin-form-label">Password (optional)</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="admin-form-input"
+              placeholder="Leave empty to inherit from gallery or no protection"
+            />
+            <p className="admin-form-help-text">
+              {selectedGallery && isGalleryProtected 
+                ? 'This post will inherit the gallery password. Set a password here to override it for this post only.'
+                : 'Set a password to protect this post independently. If in a gallery, this overrides the gallery password.'}
+            </p>
           </div>
 
           {/* Featured */}

@@ -54,7 +54,33 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { title, description, price, gallery_id, is_pinned } = body;
+    const { title, description, price, gallery_id, is_pinned, password } = body;
+
+    // Validate password if provided
+    let passwordValue: string | null | undefined = undefined;
+    if (password !== undefined) {
+      if (password === null || password === '') {
+        passwordValue = null; // Explicitly remove password
+      } else if (typeof password === 'string') {
+        const trimmedPassword = password.trim();
+        if (trimmedPassword.length > 0) {
+          if (trimmedPassword.length < 3) {
+            return NextResponse.json(
+              { error: 'Password must be at least 3 characters' },
+              { status: 400 }
+            );
+          }
+          passwordValue = trimmedPassword;
+        } else {
+          passwordValue = null; // Empty string means remove password
+        }
+      } else {
+        return NextResponse.json(
+          { error: 'Password must be a string or null' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Build update object with only provided fields
     const updateData: {
@@ -63,6 +89,7 @@ export async function PATCH(
       price?: number | null;
       gallery_id?: string | null;
       is_pinned?: boolean;
+      password?: string | null;
     } = {};
 
     if (title !== undefined) updateData.title = title;
@@ -70,6 +97,9 @@ export async function PATCH(
     if (price !== undefined) updateData.price = price;
     if (gallery_id !== undefined) updateData.gallery_id = gallery_id;
     if (is_pinned !== undefined) updateData.is_pinned = is_pinned;
+    if (passwordValue !== undefined) {
+      updateData.password = passwordValue;
+    }
 
     const { error } = await supabaseAdmin
       .from('artwork_posts')
@@ -77,13 +107,16 @@ export async function PATCH(
       .eq('id', id);
 
     if (error) {
+      console.error('[ARTWORK-PATCH] Supabase error:', error);
       throw error;
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('[ARTWORK-PATCH] Error:', error instanceof Error ? error.message : 'Unknown error');
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update artwork';
     return NextResponse.json(
-      { error: 'Failed to update artwork' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

@@ -3,7 +3,6 @@ import Navbar from '@/components/navbar/Navbar';
 import Footer from '@/components/Footer';
 import PageHeader from '@/components/galleries/PageHeader';
 import GalleryGrid from '@/components/galleries/GalleryGrid';
-import { Gallery } from '@/types/database';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -69,8 +68,22 @@ async function getGalleries(parentId: string | null = null) {
   return galleriesWithData;
 }
 
+async function getAllGalleriesForPasswordCheck(): Promise<Gallery[]> {
+  const { data, error } = await supabase
+    .from('galleries')
+    .select('*');
+
+  if (error) {
+    console.error('Error fetching all galleries:', error);
+    return [];
+  }
+
+  return (data || []) as Gallery[];
+}
+
 export default async function GalleriesPage() {
   const galleries = await getGalleries();
+  const allGalleries = await getAllGalleriesForPasswordCheck();
 
   return (
     <div className="galleries-page">
@@ -78,6 +91,7 @@ export default async function GalleriesPage() {
       
       <main className="galleries-content">
         <PageHeader 
+          title="Galleries"
           description="Browse through curated galleries."
         />
         {galleries.length === 0 ? (
@@ -85,7 +99,7 @@ export default async function GalleriesPage() {
             <p>No galleries available yet</p>
           </div>
         ) : (
-          <GalleryGrid galleries={galleries} />
+          <GalleryGrid galleries={galleries} allGalleries={allGalleries} />
         )}
       </main>
 

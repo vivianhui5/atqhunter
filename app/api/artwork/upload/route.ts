@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, description, price, gallery_id, is_pinned, imageUrls } = body;
+    const { title, description, price, gallery_id, is_pinned, imageUrls, password } = body;
 
     if (!title || !imageUrls || imageUrls.length === 0) {
       return NextResponse.json(
@@ -74,6 +74,27 @@ export async function POST(request: Request) {
       }
     }
 
+    // Validate password if provided
+    let passwordValue: string | null = null;
+    if (password !== undefined && password !== null) {
+      if (typeof password !== 'string') {
+        return NextResponse.json(
+          { error: 'Password must be a string' },
+          { status: 400 }
+        );
+      }
+      const trimmedPassword = password.trim();
+      if (trimmedPassword.length > 0) {
+        if (trimmedPassword.length < 3) {
+          return NextResponse.json(
+            { error: 'Password must be at least 3 characters' },
+            { status: 400 }
+          );
+        }
+        passwordValue = trimmedPassword;
+      }
+    }
+
     // Create artwork post
     const { data: artworkPost, error: artworkError } = await supabaseAdmin
       .from('artwork_posts')
@@ -84,6 +105,7 @@ export async function POST(request: Request) {
           price: price ? parseFloat(price) : null,
           gallery_id: gallery_id || null,
           is_pinned: is_pinned || false,
+          password: passwordValue,
         },
       ])
       .select()

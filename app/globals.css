@@ -2377,6 +2377,16 @@
   color: #991B1B;
 }
 
+.admin-gallery-card-action-button.locked {
+  color: #DC2626;
+}
+
+.admin-gallery-card-action-button.locked:hover {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  color: #991B1B;
+}
+
 .admin-gallery-card-edit-mode {
   display: flex;
   flex-direction: row;
@@ -4267,4 +4277,190 @@ img {
   font-size: 0.75rem;
   color: #78716c;
   margin-top: 0.5rem;
+}
+
+/* Password Prompt Styles */
+.password-prompt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.password-prompt-modal {
+  background: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.password-prompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e7e5e4;
+}
+
+.password-prompt-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1c1917;
+  margin: 0;
+}
+
+.password-prompt-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #78716c;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.password-prompt-close:hover {
+  background: #f5f5f4;
+  color: #1c1917;
+}
+
+.password-prompt-content {
+  padding: 1.5rem;
+}
+
+.password-prompt-footer {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+/* Password Protected Screen */
+.password-protected-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 3rem 1.5rem;
+}
+
+.password-protected-content {
+  text-align: center;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.password-protected-content > * {
+  text-align: center;
+}
+
+.password-protected-content button {
+  margin: 0 auto;
+  display: block;
+}
+
+/* Lock icon on gallery cards */
+.gallery-card-locked {
+  position: relative;
+}
+
+.gallery-card-locked::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.gallery-lock-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  color: white;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+/* Lock overlay that only covers the image area (not the full card) */
+.gallery-lock-overlay-image-only {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  color: white;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+/* Blur the underlying images when overlay is present */
+.gallery-card:has(.gallery-lock-overlay-image-only) .gallery-preview-grid,
+.gallery-card:has(.gallery-lock-overlay-image-only) .gallery-preview-empty-all,
+.artwork-card:has(.gallery-lock-overlay-image-only) .artwork-card-image {
+  -webkit-filter: blur(8px);
+  filter: blur(8px);
+}
+
+/* Don't blur the content area - keep title and metadata visible */
+/* Content areas remain visible when image-only overlay is present */
+
+.gallery-lock-overlay:hover,
+.gallery-lock-overlay-image-only:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.gallery-lock-overlay svg {
+  margin-bottom: 0.75rem;
+}
+
+.gallery-lock-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
 }

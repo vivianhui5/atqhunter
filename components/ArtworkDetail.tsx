@@ -2,12 +2,14 @@
 
 import { ArtworkPost } from '@/types/database';
 import { useState, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ZoomIn, ZoomOut, Maximize2, Mail } from 'lucide-react';
 import InquiryModal from './InquiryModal';
 
 export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
+  const searchParams = useSearchParams();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showLightbox, setShowLightbox] = useState(false);
   const [showInquiry, setShowInquiry] = useState(false);
@@ -86,9 +88,28 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
     <div className="artwork-detail-page">
       <div className="artwork-container">
       {/* Breadcrumb */}
-        <Link href="/" className="breadcrumb">
-          ← Back to Collection
-        </Link>
+        {(() => {
+          // Determine back link: gallery if exists, otherwise home
+          let backHref = '/';
+          let backText = '← Back to Collection';
+          
+          if (artwork.gallery) {
+            backHref = `/galleries/${artwork.gallery.id}`;
+            backText = `← Back to ${artwork.gallery.name}`;
+            
+            // Preserve unlockedGallery parameter if present
+            const unlockedGallery = searchParams.get('unlockedGallery');
+            if (unlockedGallery) {
+              backHref = `${backHref}?unlockedGallery=${unlockedGallery}`;
+            }
+          }
+          
+          return (
+            <Link href={backHref} className="breadcrumb">
+              {backText}
+            </Link>
+          );
+        })()}
 
         {/* Main Layout */}
         <div className="artwork-layout">

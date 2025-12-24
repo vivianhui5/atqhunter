@@ -15,6 +15,8 @@ interface UnifiedGridProps {
   onDelete: (id: string) => void;
   onDeleteGallery?: (id: string, name: string) => void;
   onUpdateGalleryName?: (id: string, newName: string) => Promise<void>;
+  onManageGalleryPassword?: (id: string, name: string, currentPassword: string | null) => void;
+  onManagePostPassword?: (id: string, title: string, currentPassword: string | null) => void;
   onMoveItem?: (itemId: string, itemType: 'gallery' | 'post', targetGalleryId: string | null) => Promise<void>;
   galleries?: Gallery[];
   currentGalleryId?: string | null;
@@ -26,6 +28,8 @@ export default function UnifiedGrid({
   onDelete,
   onDeleteGallery,
   onUpdateGalleryName,
+  onManageGalleryPassword,
+  onManagePostPassword,
   onMoveItem,
   galleries: allGalleries = [],
   currentGalleryId = null
@@ -131,6 +135,8 @@ export default function UnifiedGrid({
               subfolderCount={item.subfolderCount}
               onUpdateName={onUpdateGalleryName}
               onDelete={onDeleteGallery}
+              onManagePassword={onManageGalleryPassword}
+              allGalleries={allGalleries}
               draggable={!!onMoveItem}
               onDragStart={(e) => {
                 if (onMoveItem) {
@@ -171,6 +177,7 @@ export default function UnifiedGrid({
               artwork={item.data}
               onTogglePin={onTogglePin}
               onDelete={onDelete}
+              onManagePassword={onManagePostPassword}
               draggable={!!onMoveItem}
               onDragStart={(e) => {
                 if (onMoveItem) {

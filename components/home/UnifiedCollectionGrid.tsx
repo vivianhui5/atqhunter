@@ -8,9 +8,10 @@ type UnifiedItem =
 
 interface UnifiedCollectionGridProps {
   items: UnifiedItem[];
+  allGalleries?: Gallery[];
 }
 
-export default function UnifiedCollectionGrid({ items }: UnifiedCollectionGridProps) {
+export default function UnifiedCollectionGrid({ items, allGalleries = [] }: UnifiedCollectionGridProps) {
   if (items.length === 0) {
     return (
       <div className="empty-state">
@@ -32,6 +33,7 @@ export default function UnifiedCollectionGrid({ items }: UnifiedCollectionGridPr
             <GalleryCard
               key={`gallery-${item.data.id}`}
               gallery={item.data}
+              allGalleries={allGalleries}
             />
           ))}
         </div>
@@ -49,6 +51,7 @@ export default function UnifiedCollectionGrid({ items }: UnifiedCollectionGridPr
             <ArtworkCard
               key={`post-${item.data.id}`}
               artwork={item.data}
+              allGalleries={allGalleries}
             />
           ))}
         </div>

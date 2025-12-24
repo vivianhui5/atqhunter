@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import AdminLayout from './layout/AdminLayout';
 import { Gallery } from '@/types/database';
 import NestedGallerySelect from './NestedGallerySelect';
+import { isGalleryPasswordProtected } from '@/lib/gallery-utils';
 
 interface ImageFile {
   id: string;
@@ -28,6 +29,7 @@ export default function UploadArtworkClient() {
   const [price, setPrice] = useState('');
   const [selectedGallery, setSelectedGallery] = useState('');
   const [isPinned, setIsPinned] = useState(false);
+  const [password, setPassword] = useState('');
   const [galleries, setGalleries] = useState<Gallery[]>([]);
   const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -35,6 +37,7 @@ export default function UploadArtworkClient() {
   const [showNewGallery, setShowNewGallery] = useState(false);
   const [newGalleryName, setNewGalleryName] = useState('');
   const [selectedParentGallery, setSelectedParentGallery] = useState('');
+  const [newGalleryPassword, setNewGalleryPassword] = useState('');
   const [creatingGallery, setCreatingGallery] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -94,7 +97,8 @@ export default function UploadArtworkClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           name: trimmedName,
-          parent_id: selectedParentGallery || null
+          parent_id: selectedParentGallery || null,
+          password: newGalleryPassword.trim() || null
         }),
       });
 
@@ -105,6 +109,7 @@ export default function UploadArtworkClient() {
         setShowNewGallery(false);
         setNewGalleryName('');
         setSelectedParentGallery('');
+        setNewGalleryPassword('');
         showToast('Gallery created!', 'success');
       }
     } catch {
@@ -242,6 +247,7 @@ export default function UploadArtworkClient() {
           price: price || null,
           gallery_id: selectedGallery || null,
           is_pinned: isPinned,
+          password: password.trim() || null,
           imageUrls,
         }),
       });
@@ -272,6 +278,10 @@ export default function UploadArtworkClient() {
     setIsPinned(false);
     clearAllImages();
   };
+
+  // Check if selected gallery is password protected
+  const selectedGalleryObj = selectedGallery ? galleries.find(g => g.id === selectedGallery) : null;
+  const isGalleryProtected = selectedGalleryObj ? isGalleryPasswordProtected(selectedGalleryObj, galleries) : false;
 
   return (
     <AdminLayout>
@@ -344,6 +354,18 @@ export default function UploadArtworkClient() {
                       placeholder="Main/No gallery"
                     />
                   </div>
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <input
+                      type="password"
+                      value={newGalleryPassword}
+                      onChange={(e) => setNewGalleryPassword(e.target.value)}
+                      placeholder="Password (optional)"
+                      className="admin-form-input"
+                    />
+                    <p style={{ fontSize: '0.75rem', color: '#78716c', marginTop: '0.5rem', margin: 0 }}>
+                      Set a password to protect this gallery and all its contents
+                    </p>
+                  </div>
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
                     <button
                       type="button"
@@ -359,6 +381,7 @@ export default function UploadArtworkClient() {
                         setShowNewGallery(false);
                         setNewGalleryName('');
                         setSelectedParentGallery('');
+                        setNewGalleryPassword('');
                       }}
                         className="admin-secondary-button"
                     >
@@ -367,22 +390,37 @@ export default function UploadArtworkClient() {
                   </div>
                 </div>
               ) : (
+                <>
                   <div className="admin-gallery-selector">
-                  <NestedGallerySelect
-                    value={selectedGallery}
-                    onChange={setSelectedGallery}
-                    galleries={galleries}
-                    placeholder="Select a gallery..."
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewGallery(true)}
+                    <NestedGallerySelect
+                      value={selectedGallery}
+                      onChange={setSelectedGallery}
+                      galleries={galleries}
+                      placeholder="Select a gallery..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewGallery(true)}
                       className="admin-add-gallery-button"
-                    title="Create new gallery"
-                  >
-                    <FolderPlus size={20} />
-                  </button>
-                </div>
+                      title="Create new gallery"
+                    >
+                      <FolderPlus size={20} />
+                    </button>
+                  </div>
+                  {selectedGallery && isGalleryProtected && (
+                    <div style={{ 
+                      marginTop: '0.75rem', 
+                      padding: '0.75rem', 
+                      background: '#FEF3C7', 
+                      border: '1px solid #FCD34D', 
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      color: '#92400E'
+                    }}>
+                      <strong>⚠️ Password Protected:</strong> This gallery is password protected. The post will inherit this protection.
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -464,6 +502,24 @@ export default function UploadArtworkClient() {
           <div className="admin-form-section">
             <label htmlFor="description" className="admin-form-label">Description</label>
             <RichTextEditor content={description} onChange={setDescription} />
+          </div>
+
+          {/* Password Protection */}
+          <div className="admin-form-section">
+            <label htmlFor="password" className="admin-form-label">Password (optional)</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="admin-form-input"
+              placeholder="Leave empty to inherit from gallery or no protection"
+            />
+            <p className="admin-form-help-text">
+              {selectedGallery && isGalleryProtected 
+                ? 'This post will inherit the gallery password. Set a password here to override it for this post only.'
+                : 'Set a password to protect this post independently. If in a gallery, this overrides the gallery password.'}
+            </p>
           </div>
 
           {/* Featured */}

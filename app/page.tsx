@@ -82,9 +82,23 @@ async function getRootGalleries(): Promise<(Gallery & { previewImages?: string[]
   return galleriesWithData;
 }
 
+async function getAllGalleries(): Promise<Gallery[]> {
+  const { data, error } = await supabase
+    .from('galleries')
+    .select('*');
+
+  if (error) {
+    console.error('Error fetching all galleries:', error);
+    return [];
+  }
+
+  return (data || []) as Gallery[];
+}
+
 export default async function HomePage() {
   const { pinned, rootArtworks } = await getArtworks();
   const rootGalleries = await getRootGalleries();
+  const allGalleries = await getAllGalleries();
 
   // Create unified items: galleries first (alphabetically), then posts (alphabetically)
   type UnifiedItem = 
@@ -129,7 +143,7 @@ export default async function HomePage() {
           <div className="collection-header">
             <h2 className="section-title">Full Collection</h2>
           </div>
-          <UnifiedCollectionGrid items={items} />
+          <UnifiedCollectionGrid items={items} allGalleries={allGalleries} />
         </section>
       </main>
 

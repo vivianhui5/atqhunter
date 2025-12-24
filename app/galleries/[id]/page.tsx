@@ -1,12 +1,10 @@
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/navbar/Navbar';
 import Footer from '@/components/Footer';
-import GalleryHeader from '@/components/gallery-detail/GalleryHeader';
-import ArtworkSection from '@/components/gallery-detail/ArtworkSection';
-import GalleryBreadcrumbs from '@/components/galleries/GalleryBreadcrumbs';
-import GalleryGrid from '@/components/galleries/GalleryGrid';
+import ProtectedGalleryContent from '@/components/galleries/ProtectedGalleryContent';
 import { ArtworkPost, Gallery } from '@/types/database';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -140,35 +138,15 @@ export default async function GalleryPage({ params }: { params: Promise<{ id: st
       <Navbar />
       
       <main className="gallery-detail-content">
-        <GalleryBreadcrumbs gallery={gallery} allGalleries={allGalleries} />
-        <GalleryHeader 
-          name={gallery.name}
-          previewImages={previewImages}
-          subfolderCount={childGalleries.length}
-          artworkCount={artworks.length}
-        />
-        
-        {/* Sub-galleries (folders) */}
-        {childGalleries.length > 0 && (
-          <div className="gallery-subfolders-section">
-            <h2 className="section-subtitle">Folders</h2>
-            <GalleryGrid galleries={childGalleries} />
-          </div>
-        )}
-
-        {/* Artworks in this gallery */}
-        {artworks.length > 0 && (
-          <div className="gallery-artworks-section">
-            <ArtworkSection artworks={artworks} galleryName={gallery.name} />
-          </div>
-        )}
-
-        {/* Empty state */}
-        {childGalleries.length === 0 && artworks.length === 0 && (
-          <div className="empty-state">
-            <p>This gallery is empty</p>
-          </div>
-        )}
+        <Suspense fallback={<div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>}>
+          <ProtectedGalleryContent
+            gallery={gallery}
+            allGalleries={allGalleries}
+            childGalleries={childGalleries}
+            artworks={artworks}
+            previewImages={previewImages}
+          />
+        </Suspense>
       </main>
 
       <Footer />

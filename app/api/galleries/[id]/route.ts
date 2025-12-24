@@ -17,7 +17,7 @@ export async function PATCH(
 
     const { id } = await context.params;
     const body = await request.json();
-    const { name, parent_id } = body;
+    const { name, parent_id, password } = body;
 
     // Validate name if provided
     if (name !== undefined) {
@@ -75,10 +75,39 @@ export async function PATCH(
       }
     }
 
+    // Validate password if provided
+    let passwordValue: string | null | undefined = undefined;
+    if (password !== undefined) {
+      if (password === null || password === '') {
+        passwordValue = null; // Explicitly remove password
+      } else if (typeof password === 'string') {
+        const trimmedPassword = password.trim();
+        if (trimmedPassword.length > 0) {
+          if (trimmedPassword.length < 3) {
+            return NextResponse.json(
+              { error: 'Password must be at least 3 characters' },
+              { status: 400 }
+            );
+          }
+          passwordValue = trimmedPassword;
+        } else {
+          passwordValue = null; // Empty string means remove password
+        }
+      } else {
+        return NextResponse.json(
+          { error: 'Password must be a string or null' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Build update object
-    const updateData: { name?: string; parent_id?: string | null } = {};
+    const updateData: { name?: string; parent_id?: string | null; password?: string | null } = {};
     if (name !== undefined) updateData.name = name.trim();
     if (parent_id !== undefined) updateData.parent_id = parent_id || null;
+    if (passwordValue !== undefined) {
+      updateData.password = passwordValue;
+    }
 
     const { error } = await supabaseAdmin
       .from('galleries')

@@ -1,12 +1,14 @@
-import { ArtworkPost } from '@/types/database';
+import { ArtworkPost, Gallery } from '@/types/database';
 import ArtworkGrid from '@/components/ArtworkGrid';
 
 interface ArtworkSectionProps {
   artworks: ArtworkPost[];
   galleryName: string;
+  parentUnlocked?: boolean;
+  allGalleries?: Gallery[];
 }
 
-export default function ArtworkSection({ artworks, galleryName }: ArtworkSectionProps) {
+export default function ArtworkSection({ artworks, galleryName, parentUnlocked = false, allGalleries = [] }: ArtworkSectionProps) {
   if (artworks.length === 0) {
     return (
       <div className="empty-artworks">
@@ -20,7 +22,7 @@ export default function ArtworkSection({ artworks, galleryName }: ArtworkSection
       <div className="section-meta">
         <span className="artwork-count">{artworks.length} Artworks</span>
       </div>
-      <ArtworkGrid artworks={artworks} />
+      <ArtworkGrid artworks={artworks} parentUnlocked={parentUnlocked} allGalleries={allGalleries} />
     </div>
   );
 }

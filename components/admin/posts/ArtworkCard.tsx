@@ -2,18 +2,19 @@
 
 import { ArtworkPost } from '@/types/database';
 import Image from 'next/image';
-import { Pin, PinOff, Trash2, ImageIcon } from 'lucide-react';
+import { Pin, PinOff, Trash2, ImageIcon, Lock, Unlock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface ArtworkCardProps {
   artwork: ArtworkPost;
   onTogglePin: (id: string, currentPinned: boolean) => void;
   onDelete: (id: string) => void;
+  onManagePassword?: (id: string, title: string, currentPassword: string | null) => void;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
 }
 
-export default function ArtworkCard({ artwork, onTogglePin, onDelete, draggable = false, onDragStart }: ArtworkCardProps) {
+export default function ArtworkCard({ artwork, onTogglePin, onDelete, onManagePassword, draggable = false, onDragStart }: ArtworkCardProps) {
   const router = useRouter();
   const firstImage = artwork.images?.sort((a, b) => a.display_order - b.display_order)[0];
   
@@ -84,6 +85,15 @@ export default function ArtworkCard({ artwork, onTogglePin, onDelete, draggable 
         >
           {artwork.is_pinned ? <PinOff size={18} /> : <Pin size={18} />}
         </button>
+        {onManagePassword && (
+          <button
+            onClick={(e) => handleActionClick(e, () => onManagePassword(artwork.id, artwork.title, artwork.password || null))}
+            className={`admin-icon-button ${artwork.password ? 'active' : ''}`}
+            title={artwork.password ? 'Manage password' : 'Add password'}
+          >
+            {artwork.password ? <Lock size={18} /> : <Unlock size={18} />}
+          </button>
+        )}
         <button
           onClick={(e) => handleActionClick(e, () => onDelete(artwork.id))}
           className="admin-icon-button delete"

@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { Gallery } from '@/types/database';
+import { hasOwnPassword } from '@/lib/gallery-utils';
 import Image from 'next/image';
-import { Folder, Edit2, Check, X, Trash2 } from 'lucide-react';
+import { Folder, Edit2, Check, X, Trash2, Lock, Unlock } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface AdminGalleryCardProps {
@@ -12,6 +13,8 @@ interface AdminGalleryCardProps {
   subfolderCount?: number;
   onUpdateName?: (id: string, newName: string) => Promise<void>;
   onDelete?: (id: string, name: string) => void;
+  onManagePassword?: (id: string, name: string, currentPassword: string | null) => void;
+  allGalleries?: Gallery[];
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   onDrop?: (e: React.DragEvent) => void;
@@ -25,6 +28,8 @@ export default function AdminGalleryCard({
   subfolderCount = 0,
   onUpdateName,
   onDelete,
+  onManagePassword,
+  allGalleries = [],
   draggable = false,
   onDragStart,
   onDrop,
@@ -37,6 +42,10 @@ export default function AdminGalleryCard({
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(gallery.name);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Check if gallery has its own password (not inherited)
+  const galleryHasOwnPassword = hasOwnPassword(gallery);
+  const ownPassword = gallery.password || null;
 
   const handleClick = () => {
     if (!isEditing) {
@@ -121,6 +130,19 @@ export default function AdminGalleryCard({
                 title="Edit gallery name"
               >
                 <Edit2 size={16} />
+              </button>
+            )}
+            {onManagePassword && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Pass the gallery's own password, not the effective/inherited one
+                  onManagePassword(gallery.id, gallery.name, ownPassword);
+                }}
+                className={`admin-gallery-card-action-button ${galleryHasOwnPassword ? 'locked' : ''}`}
+                title={galleryHasOwnPassword ? 'Manage password' : 'Add password protection'}
+              >
+                {galleryHasOwnPassword ? <Lock size={16} /> : <Unlock size={16} />}
               </button>
             )}
             {onDelete && (

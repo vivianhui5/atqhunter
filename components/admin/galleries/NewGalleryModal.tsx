@@ -9,7 +9,7 @@ import NestedGallerySelect from '../NestedGallerySelect';
 interface NewGalleryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (name: string, parentId: string | null) => Promise<void>;
+  onCreate: (name: string, parentId: string | null, password: string | null) => Promise<void>;
   parentId?: string | null; // Pre-select a parent when creating from a gallery
   galleries?: Gallery[]; // All galleries for parent selection
 }
@@ -23,12 +23,14 @@ export default function NewGalleryModal({
 }: NewGalleryModalProps) {
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState<string | null>(initialParentId || null);
+  const [password, setPassword] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setName('');
       setParentId(initialParentId || null);
+      setPassword('');
     }
   }, [isOpen, initialParentId]);
 
@@ -42,10 +44,11 @@ export default function NewGalleryModal({
     if (!name.trim()) return;
 
     setIsCreating(true);
-    await onCreate(name.trim(), parentId);
+    await onCreate(name.trim(), parentId, password.trim() || null);
     setIsCreating(false);
     setName('');
     setParentId(null);
+    setPassword('');
   };
 
   return (
@@ -91,6 +94,23 @@ export default function NewGalleryModal({
               </p>
             </div>
           )}
+
+          <div className="admin-form-group">
+            <label htmlFor="gallery-password" className="admin-form-label">
+              Password (optional)
+            </label>
+            <input
+              id="gallery-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="admin-form-input"
+              placeholder="Leave empty for no password protection"
+            />
+            <p className="admin-form-help-text">
+              Set a password to protect this gallery and all its contents
+            </p>
+          </div>
 
           <div className="admin-modal-footer">
             <button

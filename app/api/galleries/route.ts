@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   try {
     await requireAuth();
 
-    const { name, parent_id } = await request.json();
+    const { name, parent_id, password } = await request.json();
 
     if (!name || typeof name !== 'string') {
       return NextResponse.json(
@@ -54,11 +54,33 @@ export async function POST(request: Request) {
       }
     }
 
+    // Validate password if provided
+    let passwordValue: string | null = null;
+    if (password !== undefined && password !== null) {
+      if (typeof password !== 'string') {
+        return NextResponse.json(
+          { error: 'Password must be a string' },
+          { status: 400 }
+        );
+      }
+      const trimmedPassword = password.trim();
+      if (trimmedPassword.length > 0) {
+        if (trimmedPassword.length < 3) {
+          return NextResponse.json(
+            { error: 'Password must be at least 3 characters' },
+            { status: 400 }
+          );
+        }
+        passwordValue = trimmedPassword;
+      }
+    }
+
     const { data, error } = await supabaseAdmin
       .from('galleries')
       .insert([{ 
         name: trimmedName,
-        parent_id: parent_id || null
+        parent_id: parent_id || null,
+        password: passwordValue
       }])
       .select()
       .single();
