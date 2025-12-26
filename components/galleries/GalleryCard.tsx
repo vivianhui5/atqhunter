@@ -31,26 +31,8 @@ export default function GalleryCard({ gallery, allGalleries = [], parentUnlocked
   // - Parent is not unlocked (if gallery inherits password)
   const showLockOverlay = !adminView && isPasswordProtected && (hasOwnPassword || !parentUnlocked);
   
-  // Build gallery URL - if parent is unlocked and gallery inherits password, pass unlocked parent ID
-  // Also preserve any existing unlockedGallery parameter from current URL
-  let galleryUrl = `/galleries/${gallery.id}`;
-  if (!adminView && parentUnlocked && !hasOwnPassword && gallery.parent_id) {
-    // Get current unlocked gallery from URL if available, otherwise use parent
-    const currentUrl = typeof window !== 'undefined' ? window.location.search : '';
-    const params = new URLSearchParams(currentUrl);
-    const existingUnlocked = params.get('unlockedGallery');
-    // Use the highest level unlocked gallery (existing or parent)
-    const unlockedId = existingUnlocked || gallery.parent_id;
-    galleryUrl = `${galleryUrl}?unlockedGallery=${unlockedId}`;
-  } else if (!adminView && typeof window !== 'undefined') {
-    // Preserve existing unlockedGallery parameter if present
-    const currentUrl = window.location.search;
-    const params = new URLSearchParams(currentUrl);
-    const existingUnlocked = params.get('unlockedGallery');
-    if (existingUnlocked) {
-      galleryUrl = `${galleryUrl}?unlockedGallery=${existingUnlocked}`;
-    }
-  }
+  // Gallery cards link to collection page with gallery filter
+  const galleryUrl = `/collection?gallery=${gallery.id}`;
 
   return (
     <Link href={galleryUrl} className="gallery-card" style={{ position: 'relative' }}>
@@ -84,7 +66,10 @@ export default function GalleryCard({ gallery, allGalleries = [], parentUnlocked
       {/* Gallery Info */}
       <div className="gallery-card-content">
         <div className="gallery-card-title-wrapper">
-          <h2 className="gallery-card-title">{gallery.name}</h2>
+          <div className="gallery-card-header">
+            <span className="gallery-card-badge">Gallery</span>
+            <h2 className="gallery-card-title">{gallery.name}</h2>
+          </div>
         </div>
         <span className="gallery-card-arrow">→</span>
         <div className="gallery-card-meta">

@@ -32,9 +32,9 @@ export default function GalleryBreadcrumbs({ gallery, allGalleries }: GalleryBre
     <nav className="gallery-breadcrumbs" aria-label="Breadcrumb">
       <ol className="gallery-breadcrumbs-list">
         <li className="gallery-breadcrumb-item">
-          <Link href="/galleries" className="gallery-breadcrumb-link">
+          <Link href="/collection" className="gallery-breadcrumb-link">
             <Home size={16} />
-            <span>Galleries Home</span>
+            <span>Collection</span>
           </Link>
         </li>
         {path.map((g, index) => {
@@ -45,7 +45,7 @@ export default function GalleryBreadcrumbs({ gallery, allGalleries }: GalleryBre
               {isLast ? (
                 <span className="gallery-breadcrumb-current">{g.name}</span>
               ) : (
-                <Link href={`/galleries/${g.id}`} className="gallery-breadcrumb-link">
+                <Link href={`/collection?gallery=${g.id}`} className="gallery-breadcrumb-link">
                   {g.name}
                 </Link>
               )}

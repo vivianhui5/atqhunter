@@ -265,6 +265,29 @@
   align-items: center;
 }
 
+.gallery-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.gallery-card-badge {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #1c1917;
+  color: white;
+  border-radius: 4px;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
 .gallery-card-title {
   font-size: 0.9375rem;
   font-weight: 600;
@@ -275,6 +298,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .gallery-card:hover .gallery-card-title {
@@ -479,6 +504,7 @@
 .back-link {
   display: inline-flex;
   align-items: center;
+  gap: 0.5rem;
   font-size: 0.875rem;
   color: #78716c;
   text-decoration: none;
@@ -821,6 +847,12 @@
   flex-direction: column;
   gap: 1.5rem;
   margin-bottom: 2rem;
+}
+
+.collection-header-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 @media (min-width: 768px) {

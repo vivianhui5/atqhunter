@@ -87,7 +87,7 @@ export default function ArtworkCard({ artwork, allGalleries = [], parentUnlocked
           <span className="gallery-label">From Gallery:</span>{' '}
       {artwork.gallery ? (
         <Link 
-          href={`/galleries/${artwork.gallery.id}`}
+          href="/collection"
               className="artwork-card-gallery-link"
         >
               {artwork.gallery.name}

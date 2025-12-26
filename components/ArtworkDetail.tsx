@@ -2,14 +2,12 @@
 
 import { ArtworkPost } from '@/types/database';
 import { useState, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ZoomIn, ZoomOut, Maximize2, Mail } from 'lucide-react';
 import InquiryModal from './InquiryModal';
 
 export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
-  const searchParams = useSearchParams();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showLightbox, setShowLightbox] = useState(false);
   const [showInquiry, setShowInquiry] = useState(false);
@@ -159,14 +157,8 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
           let backText = '← Back to Collection';
           
           if (artwork.gallery) {
-            backHref = `/galleries/${artwork.gallery.id}`;
-            backText = `← Back to ${artwork.gallery.name}`;
-            
-            // Preserve unlockedGallery parameter if present
-            const unlockedGallery = searchParams.get('unlockedGallery');
-            if (unlockedGallery) {
-              backHref = `${backHref}?unlockedGallery=${unlockedGallery}`;
-            }
+            backHref = `/collection`;
+            backText = `← Back to Collection`;
           }
           
           return (
@@ -263,7 +255,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
               <div className="metadata-item">
                 <span className="metadata-label">Gallery</span>
                 {artwork.gallery ? (
-                  <Link href={`/galleries/${artwork.gallery.id}`} className="metadata-link">
+                  <Link href="/collection" className="metadata-link">
                     {artwork.gallery.name}
                   </Link>
                 ) : (
