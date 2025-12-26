@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import Navbar from '@/components/navbar/Navbar';
 import Footer from '@/components/Footer';
 import { ArtworkPost, Gallery } from '@/types/database';
@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 async function getArtwork(id: string): Promise<ArtworkPost | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('artwork_posts')
     .select(`
       id,
@@ -23,7 +23,7 @@ async function getArtwork(id: string): Promise<ArtworkPost | null> {
       is_pinned,
       created_at,
       updated_at,
-      gallery:galleries(id, name, parent_id, cover_image_url, created_at, updated_at),
+      gallery:galleries(id, name, parent_id, cover_image_url, created_at),
       images:artwork_images(*)
     `)
     .eq('id', id)
@@ -48,9 +48,9 @@ async function getArtwork(id: string): Promise<ArtworkPost | null> {
 }
 
 async function getAllGalleries(): Promise<Gallery[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, cover_image_url, created_at, updated_at');
+    .select('id, name, parent_id, cover_image_url, created_at');
 
   if (error) {
     console.error('Error fetching all galleries:', error);

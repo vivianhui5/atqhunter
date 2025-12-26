@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { ArtworkPost, Gallery } from '@/types/database';
 import Navbar from '@/components/navbar/Navbar';
 import UnifiedCollectionGrid from '@/components/home/UnifiedCollectionGrid';
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 async function getArtworks(): Promise<{ rootArtworks: ArtworkPost[] }> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('artwork_posts')
     .select(`
       id,
@@ -20,7 +20,7 @@ async function getArtworks(): Promise<{ rootArtworks: ArtworkPost[] }> {
       is_pinned,
       created_at,
       updated_at,
-      gallery:galleries(id, name, parent_id, cover_image_url, created_at, updated_at),
+      gallery:galleries(id, name, parent_id, cover_image_url, created_at),
       images:artwork_images(*)
     `)
     .order('created_at', { ascending: false });
@@ -43,9 +43,9 @@ async function getArtworks(): Promise<{ rootArtworks: ArtworkPost[] }> {
 }
 
 async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; previewImages?: string[]; subfolderCount?: number; artworkCount?: number })[]> {
-  const { data: galleries, error } = await supabase
+  const { data: galleries, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, cover_image_url, created_at, updated_at')
+    .select('id, name, parent_id, cover_image_url, created_at')
     .is('parent_id', null)
     .order('created_at', { ascending: false });
 
@@ -61,7 +61,7 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
       
       // If no cover image set, get first artwork's first image
       if (!coverImageUrl) {
-        const { data: firstArtwork } = await supabase
+        const { data: firstArtwork } = await supabaseAdmin
           .from('artwork_posts')
           .select('images:artwork_images(image_url, display_order)')
           .eq('gallery_id', gallery.id)
@@ -69,13 +69,13 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
           .single();
         
         if (firstArtwork?.images && firstArtwork.images.length > 0) {
-          const sortedImages = firstArtwork.images.sort((a: any, b: any) => a.display_order - b.display_order);
+          const sortedImages = firstArtwork.images.sort((a: { display_order: number }, b: { display_order: number }) => a.display_order - b.display_order);
           coverImageUrl = sortedImages[0]?.image_url || null;
         }
       }
 
       // Keep previewImages for backward compatibility
-      const { data: artworks } = await supabase
+      const { data: artworks } = await supabaseAdmin
         .from('artwork_posts')
         .select('images:artwork_images(image_url)')
         .eq('gallery_id', gallery.id)
@@ -87,13 +87,13 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
         .slice(0, 4) || [];
 
       // Get subfolder count
-      const { count: subfolderCount } = await supabase
+      const { count: subfolderCount } = await supabaseAdmin
         .from('galleries')
         .select('*', { count: 'exact', head: true })
         .eq('parent_id', gallery.id);
 
       // Get artwork count
-      const { count: artworkCount } = await supabase
+      const { count: artworkCount } = await supabaseAdmin
         .from('artwork_posts')
         .select('*', { count: 'exact', head: true })
         .eq('gallery_id', gallery.id);
@@ -113,9 +113,9 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
 }
 
 async function getAllGalleries(): Promise<Gallery[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, cover_image_url, created_at, updated_at');
+    .select('id, name, parent_id, cover_image_url, created_at');
 
   if (error) {
     console.error('Error fetching all galleries:', error);

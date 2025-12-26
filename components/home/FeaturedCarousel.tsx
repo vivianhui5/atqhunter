@@ -18,8 +18,30 @@ export default function FeaturedCarousel({ items, allGalleries = [], adminView =
   // Always ensure we have at least 3 slots (fill with null if needed)
   const itemsPerPage = 3;
   
-  // Don't show if no items at all
-  if (items.length === 0) return null;
+  // If no items, show empty slots
+  if (items.length === 0) {
+    return (
+      <div className="featured-carousel-container">
+        <div className="featured-carousel-wrapper">
+          <div className="featured-carousel-slides-container">
+            <div className="featured-carousel-slides">
+              <div className="featured-carousel-page">
+                <div className="featured-carousel-slide">
+                  <div className="featured-carousel-empty-slot" />
+                </div>
+                <div className="featured-carousel-slide">
+                  <div className="featured-carousel-empty-slot" />
+                </div>
+                <div className="featured-carousel-slide">
+                  <div className="featured-carousel-empty-slot" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Create all items with padding to ensure each page has exactly 3 slots
   const allItemsWithPadding: ((ArtworkPost | (Gallery & { coverImageUrl?: string })) | null)[] = [...items];

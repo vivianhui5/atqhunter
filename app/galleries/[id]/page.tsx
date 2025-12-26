@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import Navbar from '@/components/navbar/Navbar';
 import Footer from '@/components/Footer';
 import ProtectedGalleryContent from '@/components/galleries/ProtectedGalleryContent';
@@ -11,9 +11,9 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 async function getAllGalleries(): Promise<Gallery[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, cover_image_url, created_at, updated_at');
+    .select('id, name, parent_id, cover_image_url, created_at');
 
   if (error) {
     console.error('Error fetching all galleries:', error);
@@ -25,9 +25,9 @@ async function getAllGalleries(): Promise<Gallery[]> {
 }
 
 async function getGallery(id: string): Promise<Gallery | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, cover_image_url, created_at, updated_at')
+    .select('id, name, parent_id, cover_image_url, created_at')
     .eq('id', id)
     .single();
 
@@ -37,9 +37,9 @@ async function getGallery(id: string): Promise<Gallery | null> {
 }
 
 async function getChildGalleries(parentId: string) {
-  const { data: galleries, error } = await supabase
+  const { data: galleries, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, cover_image_url, created_at, updated_at')
+    .select('id, name, parent_id, cover_image_url, created_at')
     .eq('parent_id', parentId)
     .order('created_at', { ascending: false });
 
@@ -55,7 +55,7 @@ async function getChildGalleries(parentId: string) {
       
       // If no cover image set, get first artwork's first image
       if (!coverImageUrl) {
-        const { data: firstArtwork } = await supabase
+        const { data: firstArtwork } = await supabaseAdmin
           .from('artwork_posts')
           .select('images:artwork_images(image_url, display_order)')
           .eq('gallery_id', gallery.id)
@@ -69,7 +69,7 @@ async function getChildGalleries(parentId: string) {
       }
 
       // Keep previewImages for backward compatibility
-      const { data: artworks } = await supabase
+      const { data: artworks } = await supabaseAdmin
         .from('artwork_posts')
         .select('images:artwork_images(image_url)')
         .eq('gallery_id', gallery.id)
@@ -81,13 +81,13 @@ async function getChildGalleries(parentId: string) {
         .slice(0, 4) || [];
 
       // Get subfolder count
-      const { count: subfolderCount } = await supabase
+      const { count: subfolderCount } = await supabaseAdmin
         .from('galleries')
         .select('*', { count: 'exact', head: true })
         .eq('parent_id', gallery.id);
 
       // Get artwork count
-      const { count: artworkCount } = await supabase
+      const { count: artworkCount } = await supabaseAdmin
         .from('artwork_posts')
         .select('*', { count: 'exact', head: true })
         .eq('gallery_id', gallery.id);
@@ -107,7 +107,7 @@ async function getChildGalleries(parentId: string) {
 }
 
 async function getGalleryArtworks(id: string): Promise<ArtworkPost[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('artwork_posts')
     .select(`
       id,
@@ -118,7 +118,7 @@ async function getGalleryArtworks(id: string): Promise<ArtworkPost[]> {
       is_pinned,
       created_at,
       updated_at,
-      gallery:galleries(id, name, parent_id, cover_image_url, created_at, updated_at),
+      gallery:galleries(id, name, parent_id, cover_image_url, created_at),
       images:artwork_images(*)
     `)
     .eq('gallery_id', id)
@@ -138,7 +138,7 @@ async function getGalleryArtworks(id: string): Promise<ArtworkPost[]> {
 }
 
 async function getGalleryPreviewImages(id: string): Promise<string[]> {
-  const { data: artworks } = await supabase
+  const { data: artworks } = await supabaseAdmin
     .from('artwork_posts')
     .select('images:artwork_images(image_url)')
     .eq('gallery_id', id)

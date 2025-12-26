@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { ArtworkPost, Gallery } from '@/types/database';
 import Navbar from '@/components/navbar/Navbar';
 import FeaturedCarousel from '@/components/home/FeaturedCarousel';
@@ -10,49 +10,94 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 async function getArtworks(): Promise<{ pinned: ArtworkPost[]; rootArtworks: ArtworkPost[] }> {
-  const { data, error } = await supabase
-    .from('artwork_posts')
-    .select(`
-      id,
-      title,
-      description,
-      price,
-      gallery_id,
-      is_pinned,
-      created_at,
-      updated_at,
-      gallery:galleries(id, name, parent_id, cover_image_url, created_at, updated_at),
-      images:artwork_images(*)
-    `)
-    .order('created_at', { ascending: false });
+  try {
+    // First, check if supabaseAdmin is properly initialized
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY is not set!');
+      return { pinned: [], rootArtworks: [] };
+    }
 
-  if (error) {
-    console.error('Error fetching artworks:', error);
+    const { data, error } = await supabaseAdmin
+      .from('artwork_posts')
+      .select(`
+        id,
+        title,
+        description,
+        price,
+        gallery_id,
+        is_pinned,
+        created_at,
+        updated_at,
+        gallery:galleries(id, name, parent_id, cover_image_url, created_at),
+        images:artwork_images(*)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      // Log error details for debugging
+      console.error('Error fetching artworks:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        fullError: JSON.stringify(error),
+      });
+      return { pinned: [], rootArtworks: [] };
+    }
+
+    if (!data) {
+      console.error('No data returned from Supabase');
+      return { pinned: [], rootArtworks: [] };
+    }
+
+    if (!Array.isArray(data)) {
+      console.error('Data is not an array:', typeof data, data);
+      return { pinned: [], rootArtworks: [] };
+    }
+
+    // Add password field as null for client (we don't send actual passwords)
+    const artworks = data.map(a => {
+      // Handle gallery relationship - Supabase may return it as array or object
+      let galleryObj = null;
+      if (a.gallery) {
+        // If gallery is an array, take the first item, otherwise use the object
+        galleryObj = Array.isArray(a.gallery) ? a.gallery[0] : a.gallery;
+        galleryObj = { ...galleryObj, password: null };
+      }
+      
+      return {
+        ...a,
+        password: null,
+        gallery: galleryObj,
+      };
+    }) as ArtworkPost[];
+    const pinned = artworks.filter(a => a.is_pinned);
+    // Get root artworks (those without a gallery)
+    const rootArtworks = artworks.filter(a => !a.gallery_id);
+
+    return { pinned, rootArtworks };
+  } catch (err) {
+    console.error('Exception in getArtworks:', err);
     return { pinned: [], rootArtworks: [] };
   }
-
-  // Add password field as null for client (we don't send actual passwords)
-  const artworks = (data || []).map(a => ({
-    ...a,
-    password: null,
-    gallery: a.gallery ? { ...a.gallery, password: null } : undefined,
-  })) as ArtworkPost[];
-  const pinned = artworks.filter(a => a.is_pinned);
-  // Get root artworks (those without a gallery)
-  const rootArtworks = artworks.filter(a => !a.gallery_id);
-
-  return { pinned, rootArtworks };
 }
 
 async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; previewImages?: string[]; subfolderCount?: number; artworkCount?: number })[]> {
-  const { data: galleries, error } = await supabase
+  const { data: galleries, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, cover_image_url, created_at, updated_at')
+    .select('id, name, parent_id, cover_image_url, created_at')
     .is('parent_id', null)
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Error fetching galleries:', error);
+    // Log error for debugging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error fetching galleries:', error);
+    }
+    return [];
+  }
+
+  if (!galleries || !Array.isArray(galleries)) {
     return [];
   }
 
@@ -63,7 +108,7 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
       
       // If no cover image set, get first artwork's first image
       if (!coverImageUrl) {
-        const { data: firstArtwork } = await supabase
+        const { data: firstArtwork } = await supabaseAdmin
           .from('artwork_posts')
           .select('images:artwork_images(image_url, display_order)')
           .eq('gallery_id', gallery.id)
@@ -77,7 +122,7 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
       }
 
       // Keep previewImages for backward compatibility
-      const { data: artworks } = await supabase
+      const { data: artworks } = await supabaseAdmin
         .from('artwork_posts')
         .select('images:artwork_images(image_url)')
         .eq('gallery_id', gallery.id)
@@ -89,13 +134,13 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
         .slice(0, 4) || [];
 
       // Get subfolder count
-      const { count: subfolderCount } = await supabase
+      const { count: subfolderCount } = await supabaseAdmin
         .from('galleries')
         .select('*', { count: 'exact', head: true })
         .eq('parent_id', gallery.id);
 
       // Get artwork count
-      const { count: artworkCount } = await supabase
+      const { count: artworkCount } = await supabaseAdmin
         .from('artwork_posts')
         .select('*', { count: 'exact', head: true })
         .eq('gallery_id', gallery.id);
@@ -115,9 +160,9 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
 }
 
 async function getAllGalleries(): Promise<Gallery[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, cover_image_url, created_at, updated_at');
+    .select('id, name, parent_id, cover_image_url, created_at');
 
   if (error) {
     console.error('Error fetching all galleries:', error);
@@ -191,12 +236,10 @@ export default async function HomePage() {
         </section>
 
         {/* Featured Carousel */}
-        {featuredItems.length > 0 && (
-          <section className="section-featured">
-            <h2 className="section-title">Featured</h2>
-            <FeaturedCarousel items={featuredItems} allGalleries={allGalleries} adminView={adminView} />
-          </section>
-        )}
+        <section className="section-featured">
+          <h2 className="section-title">Featured</h2>
+          <FeaturedCarousel items={featuredItems} allGalleries={allGalleries} adminView={adminView} />
+        </section>
       </main>
 
       <Footer />

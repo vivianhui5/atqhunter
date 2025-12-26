@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import Navbar from '@/components/navbar/Navbar';
 import Footer from '@/components/Footer';
 import PageHeader from '@/components/galleries/PageHeader';
@@ -10,7 +10,7 @@ export const revalidate = 0;
 
 async function getGalleries(parentId: string | null = null) {
   // Only fetch root galleries (where parent_id is null) for the main page
-  const query = supabase
+  const query = supabaseAdmin
     .from('galleries')
     .select('*')
     .order('created_at', { ascending: false });
@@ -37,7 +37,7 @@ async function getGalleries(parentId: string | null = null) {
       
       // If no cover image set, get first artwork's first image
       if (!coverImageUrl) {
-        const { data: firstArtwork } = await supabase
+        const { data: firstArtwork } = await supabaseAdmin
           .from('artwork_posts')
           .select('images:artwork_images(image_url, display_order)')
           .eq('gallery_id', gallery.id)
@@ -45,13 +45,13 @@ async function getGalleries(parentId: string | null = null) {
           .single();
         
         if (firstArtwork?.images && firstArtwork.images.length > 0) {
-          const sortedImages = firstArtwork.images.sort((a: any, b: any) => a.display_order - b.display_order);
+          const sortedImages = firstArtwork.images.sort((a: { display_order: number }, b: { display_order: number }) => a.display_order - b.display_order);
           coverImageUrl = sortedImages[0]?.image_url || null;
         }
       }
 
       // Keep previewImages for backward compatibility
-      const { data: artworks } = await supabase
+      const { data: artworks } = await supabaseAdmin
         .from('artwork_posts')
         .select('images:artwork_images(image_url)')
         .eq('gallery_id', gallery.id)
@@ -63,13 +63,13 @@ async function getGalleries(parentId: string | null = null) {
         .slice(0, 4) || [];
 
       // Get subfolder count
-      const { count: subfolderCount } = await supabase
+      const { count: subfolderCount } = await supabaseAdmin
         .from('galleries')
         .select('*', { count: 'exact', head: true })
         .eq('parent_id', gallery.id);
 
       // Get artwork count
-      const { count: artworkCount } = await supabase
+      const { count: artworkCount } = await supabaseAdmin
         .from('artwork_posts')
         .select('*', { count: 'exact', head: true })
         .eq('gallery_id', gallery.id);
@@ -88,7 +88,7 @@ async function getGalleries(parentId: string | null = null) {
 }
 
 async function getAllGalleriesForPasswordCheck(): Promise<Gallery[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('galleries')
     .select('*');
 
