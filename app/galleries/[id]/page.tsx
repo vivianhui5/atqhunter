@@ -62,8 +62,8 @@ async function getChildGalleries(parentId: string) {
           .limit(1)
           .single();
         
-        if (firstArtwork?.images && firstArtwork.images.length > 0) {
-          const sortedImages = firstArtwork.images.sort((a: any, b: any) => a.display_order - b.display_order);
+        if (firstArtwork?.images && Array.isArray(firstArtwork.images) && firstArtwork.images.length > 0) {
+          const sortedImages = firstArtwork.images.sort((a: { display_order: number }, b: { display_order: number }) => a.display_order - b.display_order);
           coverImageUrl = sortedImages[0]?.image_url || null;
         }
       }
@@ -118,7 +118,7 @@ async function getGalleryArtworks(id: string): Promise<ArtworkPost[]> {
       is_pinned,
       created_at,
       updated_at,
-      gallery:galleries(id, name, parent_id, cover_image_url),
+      gallery:galleries(id, name, parent_id, cover_image_url, created_at, updated_at),
       images:artwork_images(*)
     `)
     .eq('gallery_id', id)
@@ -130,7 +130,11 @@ async function getGalleryArtworks(id: string): Promise<ArtworkPost[]> {
   }
 
   // Add password field as null for client (we don't send actual passwords)
-  return (data || []).map(a => ({ ...a, password: null })) as ArtworkPost[];
+  return (data || []).map(a => ({
+    ...a,
+    password: null,
+    gallery: a.gallery ? { ...a.gallery, password: null } : undefined,
+  })) as ArtworkPost[];
 }
 
 async function getGalleryPreviewImages(id: string): Promise<string[]> {

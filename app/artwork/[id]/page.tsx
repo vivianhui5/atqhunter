@@ -23,18 +23,28 @@ async function getArtwork(id: string): Promise<ArtworkPost | null> {
       is_pinned,
       created_at,
       updated_at,
-      gallery:galleries(id, name, parent_id, cover_image_url),
+      gallery:galleries(id, name, parent_id, cover_image_url, created_at, updated_at),
       images:artwork_images(*)
     `)
     .eq('id', id)
     .single();
 
-  if (error) {
+  if (error || !data) {
     return null;
   }
 
   // Add password field as null for client (we don't send actual passwords)
-  return { ...data, password: null } as ArtworkPost;
+  // Also ensure gallery has password field if it exists
+  const artwork = {
+    ...data,
+    password: null,
+    gallery: data.gallery ? {
+      ...data.gallery,
+      password: null,
+    } : undefined,
+  } as ArtworkPost;
+
+  return artwork;
 }
 
 async function getAllGalleries(): Promise<Gallery[]> {

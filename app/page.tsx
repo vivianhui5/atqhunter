@@ -21,7 +21,7 @@ async function getArtworks(): Promise<{ pinned: ArtworkPost[]; rootArtworks: Art
       is_pinned,
       created_at,
       updated_at,
-      gallery:galleries(id, name, parent_id, cover_image_url),
+      gallery:galleries(id, name, parent_id, cover_image_url, created_at, updated_at),
       images:artwork_images(*)
     `)
     .order('created_at', { ascending: false });
@@ -32,7 +32,11 @@ async function getArtworks(): Promise<{ pinned: ArtworkPost[]; rootArtworks: Art
   }
 
   // Add password field as null for client (we don't send actual passwords)
-  const artworks = (data || []).map(a => ({ ...a, password: null })) as ArtworkPost[];
+  const artworks = (data || []).map(a => ({
+    ...a,
+    password: null,
+    gallery: a.gallery ? { ...a.gallery, password: null } : undefined,
+  })) as ArtworkPost[];
   const pinned = artworks.filter(a => a.is_pinned);
   // Get root artworks (those without a gallery)
   const rootArtworks = artworks.filter(a => !a.gallery_id);
@@ -66,8 +70,8 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
           .limit(1)
           .single();
         
-        if (firstArtwork?.images && firstArtwork.images.length > 0) {
-          const sortedImages = firstArtwork.images.sort((a: any, b: any) => a.display_order - b.display_order);
+        if (firstArtwork?.images && Array.isArray(firstArtwork.images) && firstArtwork.images.length > 0) {
+          const sortedImages = firstArtwork.images.sort((a: { display_order: number }, b: { display_order: number }) => a.display_order - b.display_order);
           coverImageUrl = sortedImages[0]?.image_url || null;
         }
       }
