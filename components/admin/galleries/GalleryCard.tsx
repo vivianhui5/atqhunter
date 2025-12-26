@@ -36,7 +36,7 @@ export default function GalleryCard({ gallery, artworkCount, onDelete, onEdit }:
                 src={imageUrl}
                 alt={`Preview ${index + 1}`}
                 fill
-                className="object-cover"
+                className="object-contain"
                 sizes="120px"
               />
             </div>

@@ -5,6 +5,7 @@ import ProtectedGalleryContent from '@/components/galleries/ProtectedGalleryCont
 import { ArtworkPost, Gallery } from '@/types/database';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
+import { isAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -12,31 +13,33 @@ export const revalidate = 0;
 async function getAllGalleries(): Promise<Gallery[]> {
   const { data, error } = await supabase
     .from('galleries')
-    .select('*');
+    .select('id, name, parent_id, cover_image_url, created_at, updated_at');
 
   if (error) {
     console.error('Error fetching all galleries:', error);
     return [];
   }
 
-  return (data || []) as Gallery[];
+  // Add password field as null for client (we don't send actual passwords)
+  return (data || []).map(g => ({ ...g, password: null })) as Gallery[];
 }
 
 async function getGallery(id: string): Promise<Gallery | null> {
   const { data, error } = await supabase
     .from('galleries')
-    .select('*')
+    .select('id, name, parent_id, cover_image_url, created_at, updated_at')
     .eq('id', id)
     .single();
 
   if (error) return null;
-  return data as Gallery;
+  // Add password field as null for client (we don't send actual passwords)
+  return { ...data, password: null } as Gallery;
 }
 
 async function getChildGalleries(parentId: string) {
   const { data: galleries, error } = await supabase
     .from('galleries')
-    .select('*')
+    .select('id, name, parent_id, cover_image_url, created_at, updated_at')
     .eq('parent_id', parentId)
     .order('created_at', { ascending: false });
 
@@ -45,10 +48,27 @@ async function getChildGalleries(parentId: string) {
     return [];
   }
 
-  // Fetch preview images, subfolder count, and artwork count for each child gallery
+  // Fetch cover image, subfolder count, and artwork count for each child gallery
   const galleriesWithData = await Promise.all(
     (galleries || []).map(async (gallery) => {
-      // Get preview images
+      let coverImageUrl = gallery.cover_image_url;
+      
+      // If no cover image set, get first artwork's first image
+      if (!coverImageUrl) {
+        const { data: firstArtwork } = await supabase
+          .from('artwork_posts')
+          .select('images:artwork_images(image_url, display_order)')
+          .eq('gallery_id', gallery.id)
+          .limit(1)
+          .single();
+        
+        if (firstArtwork?.images && firstArtwork.images.length > 0) {
+          const sortedImages = firstArtwork.images.sort((a: any, b: any) => a.display_order - b.display_order);
+          coverImageUrl = sortedImages[0]?.image_url || null;
+        }
+      }
+
+      // Keep previewImages for backward compatibility
       const { data: artworks } = await supabase
         .from('artwork_posts')
         .select('images:artwork_images(image_url)')
@@ -73,7 +93,9 @@ async function getChildGalleries(parentId: string) {
         .eq('gallery_id', gallery.id);
 
       return { 
-        ...gallery, 
+        ...gallery,
+        password: null, // Don't send password to client
+        coverImageUrl,
         previewImages,
         subfolderCount: subfolderCount || 0,
         artworkCount: artworkCount || 0
@@ -88,8 +110,15 @@ async function getGalleryArtworks(id: string): Promise<ArtworkPost[]> {
   const { data, error } = await supabase
     .from('artwork_posts')
     .select(`
-      *,
-      gallery:galleries(*),
+      id,
+      title,
+      description,
+      price,
+      gallery_id,
+      is_pinned,
+      created_at,
+      updated_at,
+      gallery:galleries(id, name, parent_id, cover_image_url),
       images:artwork_images(*)
     `)
     .eq('gallery_id', id)
@@ -100,7 +129,8 @@ async function getGalleryArtworks(id: string): Promise<ArtworkPost[]> {
     return [];
   }
 
-  return data as ArtworkPost[];
+  // Add password field as null for client (we don't send actual passwords)
+  return (data || []).map(a => ({ ...a, password: null })) as ArtworkPost[];
 }
 
 async function getGalleryPreviewImages(id: string): Promise<string[]> {
@@ -120,6 +150,7 @@ async function getGalleryPreviewImages(id: string): Promise<string[]> {
 
 export default async function GalleryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const adminView = await isAdmin();
   const gallery = await getGallery(id);
 
   if (!gallery) {
@@ -144,7 +175,8 @@ export default async function GalleryPage({ params }: { params: Promise<{ id: st
             allGalleries={allGalleries}
             childGalleries={childGalleries}
             artworks={artworks}
-          previewImages={previewImages}
+            previewImages={previewImages}
+            adminView={adminView}
           />
         </Suspense>
       </main>

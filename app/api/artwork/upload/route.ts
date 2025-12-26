@@ -142,8 +142,7 @@ export async function POST(request: Request) {
         },
       }
     );
-  } catch (error) {
-    console.error('[UPLOAD] Error:', error instanceof Error ? error.message : 'Unknown error');
+  } catch {
     return NextResponse.json(
       { error: 'Failed to upload artwork' },
       { status: 500 }

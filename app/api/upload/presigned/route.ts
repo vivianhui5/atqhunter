@@ -66,7 +66,6 @@ export async function POST(request: Request) {
       }
     );
   } catch (error) {
-    console.error('[PRESIGNED-URL] Error:', error instanceof Error ? error.message : 'Unknown error');
     return NextResponse.json(
       { error: 'Failed to generate upload URL' },
       { status: 500 }

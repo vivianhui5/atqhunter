@@ -5,9 +5,10 @@ interface GalleryGridProps {
   galleries: Gallery[];
   allGalleries?: Gallery[];
   parentUnlocked?: boolean;
+  adminView?: boolean;
 }
 
-export default function GalleryGrid({ galleries, allGalleries = [], parentUnlocked = false }: GalleryGridProps) {
+export default function GalleryGrid({ galleries, allGalleries = [], parentUnlocked = false, adminView = false }: GalleryGridProps) {
   if (galleries.length === 0) {
     return (
       <div className="empty-state">
@@ -24,6 +25,7 @@ export default function GalleryGrid({ galleries, allGalleries = [], parentUnlock
           gallery={gallery} 
           allGalleries={allGalleries.length > 0 ? allGalleries : galleries}
           parentUnlocked={parentUnlocked}
+          adminView={adminView}
         />
       ))}
     </div>

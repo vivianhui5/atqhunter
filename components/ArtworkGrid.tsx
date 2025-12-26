@@ -6,9 +6,10 @@ interface ArtworkGridProps {
   small?: boolean;
   parentUnlocked?: boolean;
   allGalleries?: Gallery[];
+  adminView?: boolean;
 }
 
-export default function ArtworkGrid({ artworks, small = false, parentUnlocked = false, allGalleries = [] }: ArtworkGridProps) {
+export default function ArtworkGrid({ artworks, small = false, parentUnlocked = false, allGalleries = [], adminView = false }: ArtworkGridProps) {
   if (artworks.length === 0) {
     return (
       <div className="empty-grid">
@@ -25,6 +26,7 @@ export default function ArtworkGrid({ artworks, small = false, parentUnlocked = 
           artwork={artwork} 
           allGalleries={allGalleries}
           parentUnlocked={parentUnlocked}
+          adminView={adminView}
         />
       ))}
     </div>

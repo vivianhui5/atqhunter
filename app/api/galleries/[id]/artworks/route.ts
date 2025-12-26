@@ -24,7 +24,6 @@ export async function GET(
 
     return NextResponse.json({ artworks: data });
   } catch (error) {
-    console.error('Error fetching gallery artworks:', error);
     return NextResponse.json(
       { error: 'Failed to fetch gallery artworks' },
       { status: 500 }

@@ -5,6 +5,7 @@ import { ArtworkPost, Gallery } from '@/types/database';
 import { notFound } from 'next/navigation';
 import ProtectedArtworkContent from '@/components/ProtectedArtworkContent';
 import { Suspense } from 'react';
+import { isAdmin } from '@/lib/auth';
 
 // Disable caching to show latest artwork data
 export const dynamic = 'force-dynamic';
@@ -14,8 +15,15 @@ async function getArtwork(id: string): Promise<ArtworkPost | null> {
   const { data, error } = await supabase
     .from('artwork_posts')
     .select(`
-      *,
-      gallery:galleries(*),
+      id,
+      title,
+      description,
+      price,
+      gallery_id,
+      is_pinned,
+      created_at,
+      updated_at,
+      gallery:galleries(id, name, parent_id, cover_image_url),
       images:artwork_images(*)
     `)
     .eq('id', id)
@@ -25,24 +33,27 @@ async function getArtwork(id: string): Promise<ArtworkPost | null> {
     return null;
   }
 
-  return data as ArtworkPost;
+  // Add password field as null for client (we don't send actual passwords)
+  return { ...data, password: null } as ArtworkPost;
 }
 
 async function getAllGalleries(): Promise<Gallery[]> {
   const { data, error } = await supabase
     .from('galleries')
-    .select('*');
+    .select('id, name, parent_id, cover_image_url, created_at, updated_at');
 
   if (error) {
     console.error('Error fetching all galleries:', error);
     return [];
   }
 
-  return (data || []) as Gallery[];
+  // Add password field as null for client (we don't send actual passwords)
+  return (data || []).map(g => ({ ...g, password: null })) as Gallery[];
 }
 
 export default async function ArtworkPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const adminView = await isAdmin();
   const [artwork, allGalleries] = await Promise.all([
     getArtwork(id),
     getAllGalleries(),
@@ -56,7 +67,7 @@ export default async function ArtworkPage({ params }: { params: Promise<{ id: st
     <>
       <Navbar />
       <Suspense fallback={<div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>}>
-        <ProtectedArtworkContent artwork={artwork} allGalleries={allGalleries} />
+        <ProtectedArtworkContent artwork={artwork} allGalleries={allGalleries} adminView={adminView} />
       </Suspense>
       <Footer />
     </>

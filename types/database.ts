@@ -4,6 +4,7 @@ export interface Gallery {
   parent_id: string | null;
   password: string | null;
   password_protected?: boolean;
+  cover_image_url: string | null;
   created_at: string;
   children?: Gallery[];
   path?: string; // Full path like "Parent > Child > Grandchild"

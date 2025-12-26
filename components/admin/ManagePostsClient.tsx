@@ -10,6 +10,7 @@ import EditableGalleryTitle from './posts/EditableGalleryTitle';
 import NewGalleryModal from './galleries/NewGalleryModal';
 import DeleteGalleryModal from './galleries/DeleteGalleryModal';
 import PasswordModal from './galleries/PasswordModal';
+import CoverImageSelector from './galleries/CoverImageSelector';
 import SearchBar from '@/components/SearchBar';
 import { ArtworkPost, Gallery } from '@/types/database';
 
@@ -36,6 +37,8 @@ export default function ManagePostsClient() {
   const [galleryForPassword, setGalleryForPassword] = useState<{ id: string; name: string; currentPassword: string | null } | null>(null);
   const [postForPassword, setPostForPassword] = useState<{ id: string; title: string; currentPassword: string | null } | null>(null);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [coverImageModalOpen, setCoverImageModalOpen] = useState(false);
+  const [galleryForCoverImage, setGalleryForCoverImage] = useState<{ id: string; name: string; currentCoverImage: string | null; availableImages: string[] } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();
@@ -88,26 +91,28 @@ export default function ManagePostsClient() {
     const items: UnifiedItem[] = [];
 
     // Get galleries to display
-    let displayGalleries: (Gallery & { previewImages?: string[] })[] = [];
+    let displayGalleries: (Gallery & { previewImages?: string[]; allImages?: string[] })[] = [];
     if (!currentGallery) {
       // Show root galleries
       displayGalleries = galleries.filter((g) => !g.parent_id).map((g) => {
         const galleryArtworks = artworks.filter((a) => a.gallery_id === g.id);
-        const previewImages = galleryArtworks
+        const allImages = galleryArtworks
           .flatMap((a) => a.images?.map((img) => img.image_url) || [])
-          .filter(Boolean)
-          .slice(0, 4);
-        return { ...g, previewImages };
+          .filter(Boolean);
+        // Keep previewImages for backward compatibility, but also store allImages
+        const previewImages = allImages.slice(0, 4);
+        return { ...g, previewImages, allImages };
       });
     } else {
       // Show child galleries of current gallery
       displayGalleries = galleries.filter((g) => g.parent_id === currentGallery.id).map((g) => {
         const galleryArtworks = artworks.filter((a) => a.gallery_id === g.id);
-        const previewImages = galleryArtworks
+        const allImages = galleryArtworks
           .flatMap((a) => a.images?.map((img) => img.image_url) || [])
-          .filter(Boolean)
-          .slice(0, 4);
-        return { ...g, previewImages };
+          .filter(Boolean);
+        // Keep previewImages for backward compatibility, but also store allImages
+        const previewImages = allImages.slice(0, 4);
+        return { ...g, previewImages, allImages };
       });
     }
 
@@ -284,6 +289,38 @@ export default function ManagePostsClient() {
     setPasswordModalOpen(true);
   };
 
+  const handleEditCoverImage = (id: string, name: string, currentCoverImage: string | null, availableImages: string[]) => {
+    setGalleryForCoverImage({ id, name, currentCoverImage, availableImages });
+    setCoverImageModalOpen(true);
+  };
+
+  const handleSaveCoverImage = async (imageUrl: string | null) => {
+    if (!galleryForCoverImage) return;
+
+    try {
+      const res = await fetch(`/api/galleries/${galleryForCoverImage.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cover_image_url: imageUrl }),
+      });
+
+      if (res.ok) {
+        await fetchGalleries();
+        // Update current gallery if it's the one being edited
+        if (currentGallery && currentGallery.id === galleryForCoverImage.id) {
+          setCurrentGallery({ ...currentGallery, cover_image_url: imageUrl });
+        }
+        setCoverImageModalOpen(false);
+        setGalleryForCoverImage(null);
+        showToast('Cover image updated!', 'success');
+      } else {
+        showToast('Failed to update cover image', 'error');
+      }
+    } catch {
+      showToast('Failed to update cover image', 'error');
+    }
+  };
+
   const handleSavePassword = async (password: string | null) => {
     if (!galleryForPassword && !postForPassword) return;
 
@@ -443,13 +480,24 @@ export default function ManagePostsClient() {
         </Suspense>
 
         {/* Gallery Title with Edit */}
-        {currentGallery && (
-          <EditableGalleryTitle
-            name={currentGallery.name}
-            galleryId={currentGallery.id}
-            onUpdate={handleUpdateGalleryName}
-          />
-        )}
+        {currentGallery && (() => {
+          // Get all images from artworks in this gallery
+          const galleryArtworks = artworks.filter((a) => a.gallery_id === currentGallery.id);
+          const allImages = galleryArtworks
+            .flatMap((a) => a.images?.map((img) => img.image_url) || [])
+            .filter(Boolean);
+          
+          return (
+            <EditableGalleryTitle
+              name={currentGallery.name}
+              galleryId={currentGallery.id}
+              onUpdate={handleUpdateGalleryName}
+              onEditCoverImage={handleEditCoverImage}
+              currentCoverImage={currentGallery.cover_image_url || null}
+              availableImages={allImages}
+            />
+          );
+        })()}
         
         <SearchBar
           value={searchQuery}
@@ -468,6 +516,7 @@ export default function ManagePostsClient() {
             onUpdateGalleryName={handleUpdateGalleryName}
             onManageGalleryPassword={handleManagePassword}
             onManagePostPassword={handleManagePostPassword}
+            onEditGalleryCoverImage={handleEditCoverImage}
             onMoveItem={handleMoveItem}
             galleries={galleries}
             currentGalleryId={currentGallery?.id || null}
@@ -523,6 +572,21 @@ export default function ManagePostsClient() {
             currentPassword={galleryForPassword?.currentPassword || postForPassword?.currentPassword || null}
             galleryName={galleryForPassword?.name || postForPassword?.title || ''}
             isSaving={isSavingPassword}
+          />
+        )}
+
+        {/* Cover Image Selector Modal */}
+        {galleryForCoverImage && (
+          <CoverImageSelector
+            isOpen={coverImageModalOpen}
+            onClose={() => {
+              setCoverImageModalOpen(false);
+              setGalleryForCoverImage(null);
+            }}
+            galleryId={galleryForCoverImage.id}
+            currentCoverImage={galleryForCoverImage.currentCoverImage}
+            availableImages={galleryForCoverImage.availableImages}
+            onSelect={handleSaveCoverImage}
           />
         )}
     </AdminLayout>

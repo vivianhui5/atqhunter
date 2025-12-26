@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { wouldCreateCircularReference } from '@/lib/gallery-utils';
 import { Gallery } from '@/types/database';
+import { validateUUID } from '@/lib/validation';
 
 export async function PATCH(
   request: Request,
@@ -16,8 +17,9 @@ export async function PATCH(
     }
 
     const { id } = await context.params;
+    const validatedId = validateUUID(id, 'id');
     const body = await request.json();
-    const { name, parent_id, password } = body;
+    const { name, parent_id, password, cover_image_url } = body;
 
     // Validate name if provided
     if (name !== undefined) {
@@ -38,20 +40,25 @@ export async function PATCH(
     }
 
     // Validate parent_id if provided
+    let validatedParentId: string | null = null;
     if (parent_id !== undefined) {
-      if (parent_id === id) {
-        return NextResponse.json(
-          { error: 'Gallery cannot be its own parent' },
-          { status: 400 }
-        );
-      }
-
-      if (parent_id) {
+      if (parent_id === null || parent_id === '') {
+        validatedParentId = null;
+      } else if (typeof parent_id === 'string') {
+        validatedParentId = validateUUID(parent_id, 'parent_id');
+        
+        if (validatedParentId === validatedId) {
+          return NextResponse.json(
+            { error: 'Gallery cannot be its own parent' },
+            { status: 400 }
+          );
+        }
+        
         // Check if parent exists
         const { data: parent } = await supabaseAdmin
           .from('galleries')
           .select('id')
-          .eq('id', parent_id)
+          .eq('id', validatedParentId)
           .single();
 
         if (!parent) {
@@ -66,12 +73,17 @@ export async function PATCH(
           .from('galleries')
           .select('*');
 
-        if (allGalleries && wouldCreateCircularReference(id, parent_id, allGalleries as Gallery[])) {
+        if (allGalleries && wouldCreateCircularReference(validatedId, validatedParentId, allGalleries as Gallery[])) {
           return NextResponse.json(
             { error: 'Cannot create circular reference' },
             { status: 400 }
           );
         }
+      } else {
+        return NextResponse.json(
+          { error: 'parent_id must be a string or null' },
+          { status: 400 }
+        );
       }
     }
 
@@ -102,25 +114,29 @@ export async function PATCH(
     }
 
     // Build update object
-    const updateData: { name?: string; parent_id?: string | null; password?: string | null } = {};
+    const updateData: { name?: string; parent_id?: string | null; password?: string | null; cover_image_url?: string | null } = {};
     if (name !== undefined) updateData.name = name.trim();
-    if (parent_id !== undefined) updateData.parent_id = parent_id || null;
+    if (parent_id !== undefined) {
+      updateData.parent_id = validatedParentId;
+    }
     if (passwordValue !== undefined) {
       updateData.password = passwordValue;
+    }
+    if (cover_image_url !== undefined) {
+      updateData.cover_image_url = cover_image_url || null;
     }
 
     const { error } = await supabaseAdmin
       .from('galleries')
       .update(updateData)
-      .eq('id', id);
+      .eq('id', validatedId);
 
     if (error) {
       throw error;
     }
 
     return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error('[GALLERY-PATCH] Error:', err instanceof Error ? err.message : 'Unknown error');
+  } catch {
     return NextResponse.json(
       { error: 'Failed to update gallery' },
       { status: 500 }
@@ -162,10 +178,11 @@ export async function DELETE(
     }
 
     const { id } = await context.params;
+    const validatedId = validateUUID(id, 'id');
 
     // Recursively get all child gallery IDs
-    const childIds = await getAllChildGalleryIds(id);
-    const allGalleryIds = [id, ...childIds];
+    const childIds = await getAllChildGalleryIds(validatedId);
+    const allGalleryIds = [validatedId, ...childIds];
 
     // First, update all artworks in this gallery and all child galleries to have no gallery
     await supabaseAdmin
@@ -190,15 +207,14 @@ export async function DELETE(
     const { error } = await supabaseAdmin
       .from('galleries')
       .delete()
-      .eq('id', id);
+      .eq('id', validatedId);
 
     if (error) {
       throw error;
     }
 
     return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error('[GALLERY-DELETE] Error:', err instanceof Error ? err.message : 'Unknown error');
+  } catch {
     return NextResponse.json(
       { error: 'Failed to delete gallery' },
       { status: 500 }

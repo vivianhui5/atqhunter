@@ -47,7 +47,7 @@ export default function ArtworkCard({ artwork, onTogglePin, onDelete, onManagePa
             src={firstImage.image_url}
             alt={artwork.title}
             fill
-            className="object-cover"
+            className="object-contain"
             sizes="300px"
           />
         ) : (

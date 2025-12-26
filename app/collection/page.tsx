@@ -1,15 +1,14 @@
 import { supabase } from '@/lib/supabase';
 import { ArtworkPost, Gallery } from '@/types/database';
 import Navbar from '@/components/navbar/Navbar';
-import FeaturedCarousel from '@/components/home/FeaturedCarousel';
+import UnifiedCollectionGrid from '@/components/home/UnifiedCollectionGrid';
 import Footer from '@/components/Footer';
-import Link from 'next/link';
 import { isAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-async function getArtworks(): Promise<{ pinned: ArtworkPost[]; rootArtworks: ArtworkPost[] }> {
+async function getArtworks(): Promise<{ rootArtworks: ArtworkPost[] }> {
   const { data, error } = await supabase
     .from('artwork_posts')
     .select(`
@@ -28,16 +27,15 @@ async function getArtworks(): Promise<{ pinned: ArtworkPost[]; rootArtworks: Art
 
   if (error) {
     console.error('Error fetching artworks:', error);
-    return { pinned: [], rootArtworks: [] };
+    return { rootArtworks: [] };
   }
 
   // Add password field as null for client (we don't send actual passwords)
   const artworks = (data || []).map(a => ({ ...a, password: null })) as ArtworkPost[];
-  const pinned = artworks.filter(a => a.is_pinned);
   // Get root artworks (those without a gallery)
   const rootArtworks = artworks.filter(a => !a.gallery_id);
 
-  return { pinned, rootArtworks };
+  return { rootArtworks };
 }
 
 async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; previewImages?: string[]; subfolderCount?: number; artworkCount?: number })[]> {
@@ -124,9 +122,9 @@ async function getAllGalleries(): Promise<Gallery[]> {
   return (data || []).map(g => ({ ...g, password: null })) as Gallery[];
 }
 
-export default async function HomePage() {
+export default async function CollectionPage() {
   const adminView = await isAdmin();
-  const { pinned, rootArtworks } = await getArtworks();
+  const { rootArtworks } = await getArtworks();
   const rootGalleries = await getRootGalleries();
   const allGalleries = await getAllGalleries();
 
@@ -163,39 +161,21 @@ export default async function HomePage() {
     return a.sortKey.localeCompare(b.sortKey);
   });
 
-  // Prepare featured items (only pinned artworks)
-  const featuredItems: (ArtworkPost | (Gallery & { coverImageUrl?: string }))[] = [];
-  
-  // Add all pinned artworks only
-  featuredItems.push(...pinned);
-
   return (
     <div className="home-page">
       <Navbar />
       
       <main className="main-content">
-        {/* Welcome Section */}
-        <section className="welcome-section">
-          <h1 className="welcome-title">Welcome</h1>
-          <p className="welcome-description">
-            Explore our curated collection of unique antiques and artworks. 
-            Each piece tells a story and brings history to life.
-          </p>
-          <Link href="/collection" className="view-collection-button">
-            View Full Collection
-          </Link>
+        <section className="section-collection">
+          <div className="collection-header">
+            <h2 className="section-title">Full Collection</h2>
+          </div>
+          <UnifiedCollectionGrid items={items} allGalleries={allGalleries} adminView={adminView} />
         </section>
-
-        {/* Featured Carousel */}
-        {featuredItems.length > 0 && (
-          <section className="section-featured">
-            <h2 className="section-title">Featured</h2>
-            <FeaturedCarousel items={featuredItems} allGalleries={allGalleries} adminView={adminView} />
-          </section>
-        )}
       </main>
 
       <Footer />
     </div>
   );
 }
+

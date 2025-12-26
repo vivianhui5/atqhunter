@@ -30,10 +30,27 @@ async function getGalleries(parentId: string | null = null) {
     return [];
   }
 
-  // Fetch preview images, subfolder count, and artwork count for each gallery
+  // Fetch cover image, subfolder count, and artwork count for each gallery
   const galleriesWithData = await Promise.all(
     (galleries || []).map(async (gallery) => {
-      // Get preview images from artworks directly in this gallery
+      let coverImageUrl = gallery.cover_image_url;
+      
+      // If no cover image set, get first artwork's first image
+      if (!coverImageUrl) {
+        const { data: firstArtwork } = await supabase
+          .from('artwork_posts')
+          .select('images:artwork_images(image_url, display_order)')
+          .eq('gallery_id', gallery.id)
+          .limit(1)
+          .single();
+        
+        if (firstArtwork?.images && firstArtwork.images.length > 0) {
+          const sortedImages = firstArtwork.images.sort((a: any, b: any) => a.display_order - b.display_order);
+          coverImageUrl = sortedImages[0]?.image_url || null;
+        }
+      }
+
+      // Keep previewImages for backward compatibility
       const { data: artworks } = await supabase
         .from('artwork_posts')
         .select('images:artwork_images(image_url)')
@@ -59,6 +76,7 @@ async function getGalleries(parentId: string | null = null) {
 
       return { 
         ...gallery, 
+        coverImageUrl,
         previewImages,
         subfolderCount: subfolderCount || 0,
         artworkCount: artworkCount || 0

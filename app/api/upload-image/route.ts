@@ -72,8 +72,7 @@ export async function POST(request: Request) {
         },
       }
     );
-  } catch (error) {
-    console.error('[UPLOAD-IMAGE] Error:', error instanceof Error ? error.message : 'Unknown error');
+  } catch {
     return NextResponse.json(
       { error: 'Failed to upload image' },
       { status: 500 }

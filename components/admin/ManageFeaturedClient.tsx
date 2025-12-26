@@ -140,7 +140,7 @@ export default function ManageFeaturedClient() {
                             src={firstImage.image_url}
                             alt={artwork.title}
                             fill
-                            className="object-cover"
+                            className="object-contain"
                             sizes="200px"
                           />
                         </div>

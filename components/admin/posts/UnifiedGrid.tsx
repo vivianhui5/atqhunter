@@ -6,7 +6,7 @@ import AdminGalleryCard from './AdminGalleryCard';
 import ArtworkCard from './ArtworkCard';
 
 type UnifiedItem = 
-  | { type: 'gallery'; data: Gallery & { previewImages?: string[] }; artworkCount: number; subfolderCount?: number }
+  | { type: 'gallery'; data: Gallery & { previewImages?: string[]; allImages?: string[] }; artworkCount: number; subfolderCount?: number }
   | { type: 'post'; data: ArtworkPost };
 
 interface UnifiedGridProps {
@@ -17,6 +17,7 @@ interface UnifiedGridProps {
   onUpdateGalleryName?: (id: string, newName: string) => Promise<void>;
   onManageGalleryPassword?: (id: string, name: string, currentPassword: string | null) => void;
   onManagePostPassword?: (id: string, title: string, currentPassword: string | null) => void;
+  onEditGalleryCoverImage?: (id: string, name: string, currentCoverImage: string | null, availableImages: string[]) => void;
   onMoveItem?: (itemId: string, itemType: 'gallery' | 'post', targetGalleryId: string | null) => Promise<void>;
   galleries?: Gallery[];
   currentGalleryId?: string | null;
@@ -30,6 +31,7 @@ export default function UnifiedGrid({
   onUpdateGalleryName,
   onManageGalleryPassword,
   onManagePostPassword,
+  onEditGalleryCoverImage,
   onMoveItem,
   galleries: allGalleries = [],
   currentGalleryId = null
@@ -136,6 +138,7 @@ export default function UnifiedGrid({
               onUpdateName={onUpdateGalleryName}
               onDelete={onDeleteGallery}
               onManagePassword={onManageGalleryPassword}
+              onEditCoverImage={onEditGalleryCoverImage}
               draggable={!!onMoveItem}
               onDragStart={(e) => {
                 if (onMoveItem) {

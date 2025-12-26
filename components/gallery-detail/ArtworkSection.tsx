@@ -6,9 +6,10 @@ interface ArtworkSectionProps {
   galleryName: string;
   parentUnlocked?: boolean;
   allGalleries?: Gallery[];
+  adminView?: boolean;
 }
 
-export default function ArtworkSection({ artworks, galleryName, parentUnlocked = false, allGalleries = [] }: ArtworkSectionProps) {
+export default function ArtworkSection({ artworks, galleryName, parentUnlocked = false, allGalleries = [], adminView = false }: ArtworkSectionProps) {
   if (artworks.length === 0) {
     return (
       <div className="empty-artworks">
@@ -22,7 +23,7 @@ export default function ArtworkSection({ artworks, galleryName, parentUnlocked =
       <div className="section-meta">
         <span className="artwork-count">{artworks.length} Artworks</span>
       </div>
-      <ArtworkGrid artworks={artworks} parentUnlocked={parentUnlocked} allGalleries={allGalleries} />
+      <ArtworkGrid artworks={artworks} parentUnlocked={parentUnlocked} allGalleries={allGalleries} adminView={adminView} />
     </div>
   );
 }

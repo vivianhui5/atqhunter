@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { validateUUID } from '@/lib/validation';
 
 export async function GET(
   request: Request,
@@ -9,6 +10,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const validatedId = validateUUID(id, 'id');
 
     const { data: artwork, error } = await supabaseAdmin
       .from('artwork_posts')
@@ -17,7 +19,7 @@ export async function GET(
         gallery:galleries(*),
         images:artwork_images(*)
       `)
-      .eq('id', id)
+      .eq('id', validatedId)
       .single();
 
     if (error) {
@@ -53,6 +55,7 @@ export async function PATCH(
     }
 
     const { id } = await params;
+    const validatedId = validateUUID(id, 'id');
     const body = await request.json();
     const { title, description, price, gallery_id, is_pinned, password } = body;
 
@@ -95,7 +98,19 @@ export async function PATCH(
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (price !== undefined) updateData.price = price;
-    if (gallery_id !== undefined) updateData.gallery_id = gallery_id;
+    if (gallery_id !== undefined) {
+      // Validate gallery_id if provided (must be null or valid UUID)
+      if (gallery_id === null || gallery_id === '') {
+        updateData.gallery_id = null;
+      } else if (typeof gallery_id === 'string') {
+        updateData.gallery_id = validateUUID(gallery_id, 'gallery_id');
+      } else {
+        return NextResponse.json(
+          { error: 'gallery_id must be a string or null' },
+          { status: 400 }
+        );
+      }
+    }
     if (is_pinned !== undefined) updateData.is_pinned = is_pinned;
     if (passwordValue !== undefined) {
       updateData.password = passwordValue;
@@ -104,16 +119,14 @@ export async function PATCH(
     const { error } = await supabaseAdmin
       .from('artwork_posts')
       .update(updateData)
-      .eq('id', id);
+      .eq('id', validatedId);
 
     if (error) {
-      console.error('[ARTWORK-PATCH] Supabase error:', error);
       throw error;
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('[ARTWORK-PATCH] Error:', error instanceof Error ? error.message : 'Unknown error');
     const errorMessage = error instanceof Error ? error.message : 'Failed to update artwork';
     return NextResponse.json(
       { error: errorMessage },
@@ -133,11 +146,12 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    const validatedId = validateUUID(id, 'id');
 
     const { error } = await supabaseAdmin
       .from('artwork_posts')
       .delete()
-      .eq('id', id);
+      .eq('id', validatedId);
 
     if (error) {
       throw error;

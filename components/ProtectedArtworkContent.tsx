@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ArtworkPost, Gallery } from '@/types/database';
-import { getEffectivePasswordForPost } from '@/lib/gallery-utils';
 import PasswordPrompt from './PasswordPrompt';
 import ArtworkDetail from './ArtworkDetail';
 import { Lock } from 'lucide-react';
@@ -11,76 +10,184 @@ import { Lock } from 'lucide-react';
 interface ProtectedArtworkContentProps {
   artwork: ArtworkPost;
   allGalleries: Gallery[];
+  adminView?: boolean;
 }
 
 export default function ProtectedArtworkContent({
   artwork,
   allGalleries,
+  adminView = false,
 }: ProtectedArtworkContentProps) {
   const searchParams = useSearchParams();
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isPasswordProtected, setIsPasswordProtected] = useState(false);
+  const [hasOwnPassword, setHasOwnPassword] = useState(false);
+  const [isCheckingProtection, setIsCheckingProtection] = useState(true);
 
-  const effectivePassword = getEffectivePasswordForPost(artwork, allGalleries);
-  const isPasswordProtected = effectivePassword !== null;
-  const hasOwnPassword = artwork.password !== null && artwork.password.length > 0;
+  // Check if password protected via API (server-side)
+  useEffect(() => {
+    const checkProtection = async () => {
+      try {
+        const response = await fetch('/api/check-protection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'artwork', id: artwork.id }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setIsPasswordProtected(data.isProtected);
+          setHasOwnPassword(data.hasOwnPassword);
+        }
+      } catch (error) {
+        console.error('Error checking protection:', error);
+      } finally {
+        setIsCheckingProtection(false);
+      }
+    };
+
+    if (!adminView) {
+      checkProtection();
+    } else {
+      setIsPasswordProtected(false);
+      setIsCheckingProtection(false);
+    }
+  }, [artwork.id, adminView]);
+
+  // Helper to verify if a gallery/artwork is unlocked in session storage
+  const isUnlockedInSession = (id: string): boolean => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const unlockedData = sessionStorage.getItem(`unlocked_${id}`);
+      if (!unlockedData) return false;
+      
+      const { passwordHash, timestamp } = JSON.parse(unlockedData);
+      // Expire unlocks after 7 days (604800000 ms)
+      const sevenDays = 7 * 24 * 60 * 60 * 1000;
+      if (Date.now() - timestamp > sevenDays) {
+        sessionStorage.removeItem(`unlocked_${id}`);
+        return false;
+      }
+      
+      // Hash exists and hasn't expired - consider it valid
+      // Note: If password changes, user will need to re-enter password
+      // This is acceptable for this use case
+      return !!passwordHash;
+    } catch {
+      return false;
+    }
+  };
 
   useEffect(() => {
-    if (isPasswordProtected) {
-      // Check if parent gallery was unlocked (via URL parameter)
+    if (adminView) {
+      // In admin view, always unlock
+      setIsUnlocked(true);
+      return;
+    }
+    
+    if (!isCheckingProtection && isPasswordProtected) {
+      // Check if parent gallery was unlocked (via URL parameter AND session storage)
       const unlockedGalleryId = searchParams.get('unlockedGallery');
       
       // Check if unlockedGalleryId is the artwork's gallery or an ancestor
-      let galleryUnlocked = false;
-      if (unlockedGalleryId && !hasOwnPassword && artwork.gallery_id) {
-        // Check if unlockedGalleryId is the artwork's gallery or an ancestor
-        if (artwork.gallery_id === unlockedGalleryId) {
-          galleryUnlocked = true;
-        } else {
-          // Check if unlockedGalleryId is an ancestor of the artwork's gallery
-          let currentGalleryId: string | null = artwork.gallery_id;
-          while (currentGalleryId) {
-            const gallery = allGalleries.find(g => g.id === currentGalleryId);
-            if (!gallery) break;
-            if (gallery.id === unlockedGalleryId || gallery.parent_id === unlockedGalleryId) {
+      const checkUnlock = async () => {
+        let galleryUnlocked = false;
+        if (unlockedGalleryId && !hasOwnPassword && artwork.gallery_id) {
+          // Verify the gallery is actually unlocked in session storage
+          if (isUnlockedInSession(unlockedGalleryId)) {
+            // Check if unlockedGalleryId is the artwork's gallery or an ancestor
+            if (artwork.gallery_id === unlockedGalleryId) {
               galleryUnlocked = true;
-              break;
+            } else {
+              // Check if unlockedGalleryId is an ancestor of the artwork's gallery
+              let currentGalleryId: string | null = artwork.gallery_id;
+              while (currentGalleryId) {
+                const gallery = allGalleries.find(g => g.id === currentGalleryId);
+                if (!gallery) break;
+                if (gallery.id === unlockedGalleryId || gallery.parent_id === unlockedGalleryId) {
+                  galleryUnlocked = true;
+                  break;
+                }
+                currentGalleryId = gallery.parent_id;
+              }
             }
-            currentGalleryId = gallery.parent_id;
           }
         }
-      }
+        
+        // Also check if artwork has its own password and is unlocked
+        if (!galleryUnlocked && hasOwnPassword && isUnlockedInSession(artwork.id)) {
+          galleryUnlocked = true;
+        }
+        
+        if (galleryUnlocked) {
+          // Gallery or ancestor was unlocked and password is still valid - allow access
+          setIsUnlocked(true);
+        } else {
+          // Need to prompt for password
+          setShowPasswordPrompt(true);
+        }
+      };
       
-      if (galleryUnlocked) {
-        // Gallery or ancestor was unlocked and artwork inherits password - allow access
-        setIsUnlocked(true);
-      } else {
-        // Need to prompt for password
-        setShowPasswordPrompt(true);
-      }
-    } else {
+      checkUnlock();
+    } else if (!isCheckingProtection && !isPasswordProtected) {
       setIsUnlocked(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [artwork.id, artwork.gallery_id]);
+  }, [artwork.id, artwork.gallery_id, isPasswordProtected, isCheckingProtection, hasOwnPassword]);
 
   const handlePasswordSubmit = async (password: string) => {
     setIsVerifying(true);
     setPasswordError('');
 
-    // Check password - can be the artwork's own password or inherited from gallery
-    if (password === effectivePassword) {
-      // Password correct - unlock for this page view only (no session storage)
-      setIsUnlocked(true);
-      setShowPasswordPrompt(false);
-    } else {
-      setPasswordError('Incorrect password. Please try again.');
+    try {
+      // Verify password via server-side API
+      const response = await fetch('/api/verify-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          type: 'artwork', 
+          id: artwork.id, 
+          password 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.valid) {
+        // Password correct - store password hash in session storage
+        if (typeof window !== 'undefined') {
+          // Store unlock for the artwork (if it has own password) or its gallery
+          const unlockKey = hasOwnPassword ? artwork.id : (artwork.gallery_id || artwork.id);
+          sessionStorage.setItem(`unlocked_${unlockKey}`, JSON.stringify({
+            passwordHash: data.passwordHash, // SHA-256 hash from server
+            timestamp: Date.now(),
+          }));
+        }
+        
+        setIsUnlocked(true);
+        setShowPasswordPrompt(false);
+      } else {
+        setPasswordError('Incorrect password. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error verifying password:', error);
+      setPasswordError('Failed to verify password. Please try again.');
     }
 
     setIsVerifying(false);
   };
+
+  // Show loading while checking protection status
+  if (isCheckingProtection) {
+    return (
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   // Show lock screen if password protected and not unlocked
   if (isPasswordProtected && !isUnlocked) {

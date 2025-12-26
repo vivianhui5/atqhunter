@@ -18,25 +18,75 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const lightboxImageRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
   
   const images = artwork.images?.sort((a, b) => a.display_order - b.display_order) || [];
 
-  // Zoom handlers
+  // Calculate initial zoom when image loads (fits in container)
+  // zoom = 1 means image is at its natural/original size (100% of original pixels)
+  const handleImageLoad = () => {
+    if (imageRef.current && lightboxImageRef.current) {
+      const img = imageRef.current;
+      
+      // Get natural image dimensions (original pixel size)
+      const naturalWidth = img.naturalWidth;
+      const naturalHeight = img.naturalHeight;
+      
+      if (naturalWidth === 0 || naturalHeight === 0) return;
+      
+      // Get container dimensions (accounting for max constraints)
+      const containerWidth = window.innerWidth * 0.9;
+      const containerHeight = window.innerHeight * 0.9;
+      
+      // Calculate scale to fit image in container (maintaining aspect ratio)
+      const scaleX = containerWidth / naturalWidth;
+      const scaleY = containerHeight / naturalHeight;
+      const fitScale = Math.min(scaleX, scaleY, 1); // Don't scale up beyond natural size
+      
+      // zoom = 1 means natural size (100% of original pixels)
+      // Initial zoom is the fit scale (could be < 1 if image is larger than container)
+      setZoom(fitScale); // Start at fit size
+      setPosition({ x: 0, y: 0 });
+    }
+  };
+
+  // Reset zoom when image changes - use a key change to trigger recalculation
+  const imageKey = `${currentImageIndex}-${showLightbox}`;
+
+  // Zoom handlers - zoom is relative to natural size (1 = 100% = natural size)
   const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 0.5, 5));
+    setZoom(prev => {
+      const maxZoom = 5; // Max zoom is 5x natural size (500%)
+      return Math.min(prev + 0.1, maxZoom);
+    });
   };
 
   const handleZoomOut = () => {
     setZoom(prev => {
-      const newZoom = Math.max(prev - 0.5, 1);
-      if (newZoom === 1) {
-        setPosition({ x: 0, y: 0 }); // Reset position when fully zoomed out
+      // Calculate minimum zoom to fit in container
+      if (imageRef.current && lightboxImageRef.current) {
+        const img = imageRef.current;
+        const naturalWidth = img.naturalWidth;
+        const naturalHeight = img.naturalHeight;
+        if (naturalWidth > 0 && naturalHeight > 0) {
+          const containerWidth = window.innerWidth * 0.9;
+          const containerHeight = window.innerHeight * 0.9;
+          const scaleX = containerWidth / naturalWidth;
+          const scaleY = containerHeight / naturalHeight;
+          const minZoom = Math.min(scaleX, scaleY, 1);
+          const newZoom = Math.max(prev - 0.1, minZoom);
+          if (newZoom <= minZoom) {
+            setPosition({ x: 0, y: 0 }); // Reset position when at fit size
+          }
+          return newZoom;
+        }
       }
-      return newZoom;
+      return Math.max(prev - 0.1, 0.1);
     });
   };
 
   const handleResetZoom = () => {
+    // Reset to natural size (100% = 1)
     setZoom(1);
     setPosition({ x: 0, y: 0 });
   };
@@ -44,10 +94,25 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
   // Mouse wheel zoom
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.2 : 0.2;
+    const delta = e.deltaY > 0 ? -0.05 : 0.05;
     setZoom(prev => {
-      const newZoom = Math.max(1, Math.min(prev + delta, 5));
-      if (newZoom === 1) {
+      // Calculate minimum zoom to fit in container
+      let minZoom = 0.1;
+      if (imageRef.current) {
+        const img = imageRef.current;
+        const naturalWidth = img.naturalWidth;
+        const naturalHeight = img.naturalHeight;
+        if (naturalWidth > 0 && naturalHeight > 0) {
+          const containerWidth = window.innerWidth * 0.9;
+          const containerHeight = window.innerHeight * 0.9;
+          const scaleX = containerWidth / naturalWidth;
+          const scaleY = containerHeight / naturalHeight;
+          minZoom = Math.min(scaleX, scaleY, 1);
+        }
+      }
+      const maxZoom = 5; // 500% of natural size
+      const newZoom = Math.max(minZoom, Math.min(prev + delta, maxZoom));
+      if (newZoom <= minZoom) {
         setPosition({ x: 0, y: 0 });
       }
       return newZoom;
@@ -56,7 +121,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
 
   // Pan/drag handlers
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (zoom > 1) {
+    if (zoom > 1) { // Can drag when zoomed beyond natural size
       setIsDragging(true);
       setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
     }
@@ -75,10 +140,10 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
     setIsDragging(false);
   };
 
-  // Double-click to reset
+  // Double-click to reset or zoom in
   const handleDoubleClick = () => {
     if (zoom > 1) {
-      handleResetZoom();
+      handleResetZoom(); // Reset to natural size (100%)
     } else {
       handleZoomIn();
     }
@@ -120,7 +185,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                 <div className="image-container-wrapper">
                     <div className="main-image" onClick={() => {
                       setShowLightbox(true);
-                      setZoom(1);
+                      // Reset will happen when image loads
                       setPosition({ x: 0, y: 0 });
                     }}>
                     <Image
@@ -270,7 +335,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
             <span className="lightbox-zoom-level">{Math.round(zoom * 100)}%</span>
             <button 
               onClick={handleZoomOut}
-              disabled={zoom <= 1}
+              disabled={zoom <= 0.1}
               className="lightbox-zoom-button"
               title="Zoom out"
               aria-label="Zoom out"
@@ -281,7 +346,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
               onClick={handleResetZoom}
               disabled={zoom === 1}
               className="lightbox-zoom-button"
-              title="Reset zoom"
+              title="Reset to 100% (natural size)"
               aria-label="Reset zoom"
             >
               <Maximize2 size={20} />
@@ -295,7 +360,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                 onClick={(e) => {
                   e.stopPropagation();
                   setCurrentImageIndex((currentImageIndex - 1 + images.length) % images.length);
-                  setZoom(1);
+                  // Reset will happen when new image loads
                   setPosition({ x: 0, y: 0 });
                 }}
                 className="lightbox-arrow lightbox-arrow-left"
@@ -307,7 +372,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                 onClick={(e) => {
                   e.stopPropagation();
                   setCurrentImageIndex((currentImageIndex + 1) % images.length);
-                  setZoom(1);
+                  // Reset will happen when new image loads
                   setPosition({ x: 0, y: 0 });
                 }}
                 className="lightbox-arrow lightbox-arrow-right"
@@ -333,14 +398,20 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
               cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
             }}
           >
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              key={imageKey}
+              ref={imageRef}
               src={images[currentImageIndex].image_url}
               alt={artwork.title}
-              fill
               className="lightbox-image"
-              sizes="100vw"
-              quality={100}
-              priority
+              onLoad={handleImageLoad}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                pointerEvents: 'none',
+              }}
             />
           </div>
         </div>

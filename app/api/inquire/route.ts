@@ -38,7 +38,6 @@ export async function POST(request: Request) {
   try {
     // Check if API key is configured
     if (!process.env.RESEND_API_KEY) {
-      console.error('[INQUIRE] RESEND_API_KEY is not set in environment variables');
       return NextResponse.json(
         { error: 'Email service is not configured. Please contact support.' },
         { status: 500 }
@@ -152,13 +151,6 @@ export async function POST(request: Request) {
 
       if (error) {
         // Log full error server-side for debugging (only in development)
-        const errorDetails = {
-          message: error.message,
-          name: error.name,
-          statusCode: 'statusCode' in error ? (error as { statusCode?: number }).statusCode : undefined,
-        };
-        console.error('[INQUIRE] Resend API error:', JSON.stringify(errorDetails, null, 2));
-        
         // In development, show more helpful error messages
         const isDevelopment = process.env.NODE_ENV === 'development';
         
@@ -197,15 +189,13 @@ export async function POST(request: Request) {
 
       // Success
       if (!data) {
-        console.error('[INQUIRE] Resend returned no data and no error');
         return NextResponse.json(
           { error: 'Failed to send email. Please try again later.' },
           { status: 500 }
         );
       }
-    } catch (resendError) {
+    } catch {
       // Catch any exceptions from Resend
-      console.error('[INQUIRE] Resend exception:', resendError instanceof Error ? resendError.message : 'Unknown error');
       return NextResponse.json(
         { error: 'Failed to send email. Please try again later.' },
         { status: 500 }
@@ -222,9 +212,8 @@ export async function POST(request: Request) {
         },
       }
     );
-  } catch (error) {
-    // Log error server-side for debugging
-    console.error('[INQUIRE] Unexpected error:', error instanceof Error ? error.message : 'Unknown error');
+  } catch {
+    // Handle unexpected errors
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

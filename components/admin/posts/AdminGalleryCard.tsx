@@ -4,16 +4,17 @@ import { useState } from 'react';
 import { Gallery } from '@/types/database';
 import { hasOwnPassword } from '@/lib/gallery-utils';
 import Image from 'next/image';
-import { Folder, Edit2, Check, X, Trash2, Lock, Unlock } from 'lucide-react';
+import { Folder, Edit2, Check, X, Trash2, Lock, Unlock, Image as ImageIcon } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface AdminGalleryCardProps {
-  gallery: Gallery & { previewImages?: string[] };
+  gallery: Gallery & { previewImages?: string[]; allImages?: string[] };
   artworkCount: number;
   subfolderCount?: number;
   onUpdateName?: (id: string, newName: string) => Promise<void>;
   onDelete?: (id: string, name: string) => void;
   onManagePassword?: (id: string, name: string, currentPassword: string | null) => void;
+  onEditCoverImage?: (id: string, name: string, currentCoverImage: string | null, availableImages: string[]) => void;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   onDrop?: (e: React.DragEvent) => void;
@@ -28,6 +29,7 @@ export default function AdminGalleryCard({
   onUpdateName,
   onDelete,
   onManagePassword,
+  onEditCoverImage,
   draggable = false,
   onDragStart,
   onDrop,
@@ -37,6 +39,7 @@ export default function AdminGalleryCard({
   const router = useRouter();
   const searchParams = useSearchParams();
   const previewImages = gallery.previewImages || [];
+  const allImages = gallery.allImages || previewImages; // Use allImages if available, otherwise fallback to previewImages
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(gallery.name);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -95,30 +98,26 @@ export default function AdminGalleryCard({
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
     >
-      {/* Preview Images with Edit Button Overlay */}
+      {/* Cover Image with Edit Button Overlay */}
       <div className="admin-gallery-preview-wrapper">
-        {previewImages.length > 0 ? (
-          <div className="admin-gallery-preview-grid">
-            {previewImages.slice(0, 4).map((imageUrl, index) => (
-              <div key={index} className="admin-gallery-preview-image">
-                <Image
-                  src={imageUrl}
-                  alt={`${gallery.name} preview ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="120px"
-                />
-              </div>
-            ))}
-            {Array.from({ length: 4 - previewImages.length }).map((_, index) => (
-              <div key={`empty-${index}`} className="admin-gallery-preview-empty" />
-            ))}
-          </div>
-        ) : (
-          <div className="admin-gallery-preview-empty-all">
-            <Folder size={32} />
-          </div>
-        )}
+        {(() => {
+          const coverImageUrl = gallery.cover_image_url || previewImages[0] || null;
+          return coverImageUrl ? (
+            <div className="admin-gallery-cover-image">
+              <Image
+                src={coverImageUrl}
+                alt={gallery.name}
+                fill
+                className="object-contain"
+                sizes="200px"
+              />
+            </div>
+          ) : (
+            <div className="admin-gallery-preview-empty-all">
+              <Folder size={32} />
+            </div>
+          );
+        })()}
         {!isEditing && (
           <div className="admin-gallery-card-actions-overlay">
             {onUpdateName && (
@@ -129,6 +128,18 @@ export default function AdminGalleryCard({
           >
             <Edit2 size={16} />
           </button>
+            )}
+            {onEditCoverImage && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditCoverImage(gallery.id, gallery.name, gallery.cover_image_url || null, allImages);
+                }}
+                className="admin-gallery-card-action-button"
+                title="Edit cover image"
+              >
+                <ImageIcon size={16} />
+              </button>
             )}
             {onManagePassword && (
               <button

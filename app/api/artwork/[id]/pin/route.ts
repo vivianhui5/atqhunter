@@ -29,7 +29,6 @@ export async function PATCH(
 
     return NextResponse.json({ artwork: data });
   } catch (error) {
-    console.error('Error updating pin status:', error);
     return NextResponse.json(
       { error: 'Failed to update pin status' },
       { status: 500 }

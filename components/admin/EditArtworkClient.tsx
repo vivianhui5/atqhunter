@@ -84,7 +84,6 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
 
   const fetchArtwork = async () => {
     try {
-      console.log('Fetching artwork data...');
       const res = await fetch(`/api/artwork/${artworkId}?t=${Date.now()}`, {
         cache: 'no-store',
         headers: {
@@ -99,8 +98,6 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
       }
 
       const data = await res.json();
-      console.log('Fetched artwork data:', data.artwork);
-      console.log('Fetched images:', data.artwork.images);
       setTitle(data.artwork.title);
       setDescription(data.artwork.description || '');
       setPrice(data.artwork.price?.toString() || '');
@@ -113,10 +110,8 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
         const sortedImages = data.artwork.images.sort(
           (a: ArtworkImage, b: ArtworkImage) => a.display_order - b.display_order
         );
-        console.log('Setting images to state:', sortedImages);
         setExistingImages(sortedImages);
       } else {
-        console.log('No images found');
         setExistingImages([]);
       }
     } catch (err) {
@@ -165,18 +160,14 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
   const deleteExistingImage = async (imageId: string) => {
     if (!confirm('Delete this image?')) return;
 
-    console.log('Deleting image:', imageId);
-    console.log('Current images before delete:', existingImages.length);
 
     try {
       const res = await fetch(`/api/artwork/${artworkId}/images?imageId=${imageId}`, {
         method: 'DELETE',
       });
 
-      console.log('Delete response status:', res.status);
 
       if (res.ok) {
-        console.log('Delete successful, refetching artwork data');
         showToast('Image deleted', 'success');
         // Refetch the artwork data to ensure sync
         await fetchArtwork();
@@ -248,10 +239,8 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
 
   const handleNewImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    console.log('Files selected:', files.length);
     const remaining = 24 - (existingImages.length + newImageFiles.length);
     const filesToAdd = files.slice(0, remaining);
-    console.log('Files to add:', filesToAdd.length);
 
     for (const file of filesToAdd) {
       if (file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')) {
@@ -339,13 +328,11 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
     e.preventDefault();
     if (!title.trim()) return;
 
-    console.log('Form submitted. New images to upload:', newImageFiles.length);
     setLoading(true);
 
     try {
       // First, upload any new images directly to R2
       if (newImageFiles.length > 0) {
-        console.log('Uploading', newImageFiles.length, 'new images...');
         showToast('Uploading images...', 'info');
         const uploadedUrls = await Promise.all(
           newImageFiles.map(({ file }) => uploadImageToR2(file, file.name))
@@ -353,7 +340,6 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
 
         // Add uploaded images to database
         if (uploadedUrls.length > 0) {
-          console.log('Adding', uploadedUrls.length, 'images to database...');
           const startOrder = existingImages.length;
           const imagesToAdd = uploadedUrls.map((url, i) => ({
             image_url: url,
@@ -372,12 +358,10 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
             setLoading(false);
             return;
           }
-          console.log('Images added to database successfully');
         }
       }
 
       // Update artwork metadata
-      console.log('Updating artwork metadata...');
       const res = await fetch(`/api/artwork/${artworkId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

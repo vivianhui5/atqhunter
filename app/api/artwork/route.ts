@@ -17,8 +17,7 @@ export async function GET() {
     }
 
     return NextResponse.json({ artworks: data });
-  } catch (error) {
-    console.error('Error fetching artworks:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Failed to fetch artworks' },
       { status: 500 }

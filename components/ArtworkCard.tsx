@@ -10,23 +10,25 @@ interface ArtworkCardProps {
   artwork: ArtworkPost;
   allGalleries?: Gallery[];
   parentUnlocked?: boolean;
+  adminView?: boolean;
 }
 
-export default function ArtworkCard({ artwork, allGalleries = [], parentUnlocked = false }: ArtworkCardProps) {
+export default function ArtworkCard({ artwork, allGalleries = [], parentUnlocked = false, adminView = false }: ArtworkCardProps) {
   const firstImage = artwork.images?.sort((a, b) => a.display_order - b.display_order)[0];
   const isProtected = isPostPasswordProtected(artwork, allGalleries);
   const hasOwnPassword = artwork.password !== null && artwork.password.length > 0;
   
   // Show lock overlay if:
+  // - Not in admin view AND
   // - Post is password protected AND
   // - Post has its own password (parent unlock doesn't bypass) OR
   // - Parent is not unlocked (if post inherits password)
-  const showLockOverlay = isProtected && (hasOwnPassword || !parentUnlocked);
+  const showLockOverlay = !adminView && isProtected && (hasOwnPassword || !parentUnlocked);
   
   // Build artwork URL - if parent is unlocked and artwork inherits password, pass gallery ID
   // Also preserve any existing unlockedGallery parameter from current URL
   let artworkUrl = `/artwork/${artwork.id}`;
-  if (parentUnlocked && !hasOwnPassword && artwork.gallery_id) {
+  if (!adminView && parentUnlocked && !hasOwnPassword && artwork.gallery_id) {
     // Get current unlocked gallery from URL if available, otherwise use artwork's gallery
     const currentUrl = typeof window !== 'undefined' ? window.location.search : '';
     const params = new URLSearchParams(currentUrl);
@@ -34,7 +36,7 @@ export default function ArtworkCard({ artwork, allGalleries = [], parentUnlocked
     // Use the highest level unlocked gallery (existing or artwork's gallery)
     const unlockedId = existingUnlocked || artwork.gallery_id;
     artworkUrl = `${artworkUrl}?unlockedGallery=${unlockedId}`;
-  } else if (typeof window !== 'undefined') {
+  } else if (!adminView && typeof window !== 'undefined') {
     // Preserve existing unlockedGallery parameter if present
     const currentUrl = window.location.search;
     const params = new URLSearchParams(currentUrl);

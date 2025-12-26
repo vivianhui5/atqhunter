@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '@/lib/supabase';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function POST(request: Request) {
   try {
+    // CRITICAL: Require admin authentication to create new admin users
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { email, password } = await request.json();
 
     if (!email || !password) {
@@ -44,7 +52,6 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating admin user:', error);
     return NextResponse.json(
       { error: 'Failed to create admin user' },
       { status: 500 }

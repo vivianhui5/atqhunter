@@ -1,15 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { Edit2, Check, X } from 'lucide-react';
+import { Edit2, Check, X, Image as ImageIcon } from 'lucide-react';
 
 interface EditableGalleryTitleProps {
   name: string;
   galleryId: string;
   onUpdate: (id: string, newName: string) => Promise<void>;
+  onEditCoverImage?: (id: string, name: string, currentCoverImage: string | null, availableImages: string[]) => void;
+  currentCoverImage?: string | null;
+  availableImages?: string[];
 }
 
-export default function EditableGalleryTitle({ name, galleryId, onUpdate }: EditableGalleryTitleProps) {
+export default function EditableGalleryTitle({ 
+  name, 
+  galleryId, 
+  onUpdate, 
+  onEditCoverImage,
+  currentCoverImage,
+  availableImages = []
+}: EditableGalleryTitleProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(name);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -77,13 +87,24 @@ export default function EditableGalleryTitle({ name, galleryId, onUpdate }: Edit
   return (
     <div className="admin-editable-title">
       <h2 className="admin-gallery-view-title">{name}</h2>
-      <button
-        onClick={() => setIsEditing(true)}
-        className="admin-editable-edit-button"
-        title="Edit gallery name"
-      >
-        <Edit2 size={18} />
-      </button>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        {onEditCoverImage && (
+          <button
+            onClick={() => onEditCoverImage(galleryId, name, currentCoverImage || null, availableImages)}
+            className="admin-editable-edit-button"
+            title="Edit cover image"
+          >
+            <ImageIcon size={18} />
+          </button>
+        )}
+        <button
+          onClick={() => setIsEditing(true)}
+          className="admin-editable-edit-button"
+          title="Edit gallery name"
+        >
+          <Edit2 size={18} />
+        </button>
+      </div>
     </div>
   );
 }
