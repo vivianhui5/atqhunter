@@ -44,7 +44,7 @@ export default function AdminNavbar() {
             className="admin-action-link"
           >
             <Eye size={18} />
-            <span>View Site</span>
+            <span>Public View</span>
           </a>
           <button
             onClick={() => signOut({ callbackUrl: '/' })}

@@ -1730,6 +1730,7 @@
 .collection-search {
   max-width: 400px;
   width: 100%;
+  margin-bottom: 2rem;
 }
 
 .admin-page-header {
@@ -4674,13 +4675,75 @@ img {
 /* Blur the underlying images when overlay is present */
 .gallery-card:has(.gallery-lock-overlay-image-only) .gallery-preview-grid,
 .gallery-card:has(.gallery-lock-overlay-image-only) .gallery-preview-empty-all,
+.gallery-card:has(.gallery-lock-overlay-image-only) .gallery-cover-image,
 .artwork-card:has(.gallery-lock-overlay-image-only) .artwork-card-image {
   -webkit-filter: blur(8px);
   filter: blur(8px);
 }
 
-/* Don't blur the content area - keep title and metadata visible */
-/* Content areas remain visible when image-only overlay is present */
+/* Blur titles when password protected */
+.gallery-card:has(.gallery-lock-overlay-image-only) .gallery-card-title,
+.artwork-card:has(.gallery-lock-overlay-image-only) .artwork-card-title {
+  -webkit-filter: blur(8px);
+  filter: blur(8px);
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Don't blur ID - it should always be visible even when password protected */
+.gallery-card:has(.gallery-lock-overlay-image-only) .gallery-card-id,
+.artwork-card:has(.gallery-lock-overlay-image-only) .artwork-card-id {
+  -webkit-filter: none !important;
+  filter: none !important;
+  -webkit-user-select: auto !important;
+  user-select: auto !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure ID elements are positioned correctly */
+.gallery-card-id {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  line-height: 1.2;
+  font-size: 0.65rem;
+  color: #78716c;
+  font-family: monospace;
+}
+
+.artwork-card-id {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  line-height: 1.2;
+  font-size: 0.65rem;
+  color: #78716c;
+  font-family: monospace;
+}
+
+/* Copy ID button */
+.copy-id-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  color: #78716c;
+  transition: color 0.2s;
+}
+
+.copy-id-button:hover {
+  color: #1c1917;
+}
+
+.copy-id-button:focus {
+  outline: none;
+  color: #1c1917;
+}
 
 .gallery-lock-overlay:hover,
 .gallery-lock-overlay-image-only:hover {

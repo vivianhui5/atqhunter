@@ -270,7 +270,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
               className="inquire-button"
             >
               <Mail size={20} />
-              Contact
+              Contact / 联系我们
             </button>
 
             {/* Separator */}

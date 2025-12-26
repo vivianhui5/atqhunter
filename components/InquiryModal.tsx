@@ -101,7 +101,7 @@ export default function InquiryModal({ isOpen, onClose, artworkTitle }: InquiryM
 
             <div className="inquiry-form-group">
               <label htmlFor="inquiry-email" className="inquiry-label">
-                Your Email *
+                Your Email / 你的 *
               </label>
               <input
                 id="inquiry-email"
@@ -117,7 +117,7 @@ export default function InquiryModal({ isOpen, onClose, artworkTitle }: InquiryM
 
             <div className="inquiry-form-group">
               <label htmlFor="inquiry-subject" className="inquiry-label">
-                Subject *
+                Subject / 标题 *
               </label>
               <input
                 id="inquiry-subject"
@@ -133,7 +133,7 @@ export default function InquiryModal({ isOpen, onClose, artworkTitle }: InquiryM
 
             <div className="inquiry-form-group">
               <label htmlFor="inquiry-message" className="inquiry-label">
-                Message *
+                Message  / 短信*
               </label>
               <textarea
                 id="inquiry-message"

@@ -1,12 +1,13 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { ArtworkPost, Gallery } from '@/types/database';
 import Navbar from '@/components/navbar/Navbar';
-import UnifiedCollectionGrid from '@/components/home/UnifiedCollectionGrid';
 import Footer from '@/components/Footer';
 import { isAdmin } from '@/lib/auth';
 import GalleryBreadcrumbs from '@/components/galleries/GalleryBreadcrumbs';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { getEffectivePassword, getEffectivePasswordForPost } from '@/lib/gallery-utils';
+import CollectionClient from '@/components/collection/CollectionClient';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -20,6 +21,7 @@ async function getArtworks(galleryId?: string): Promise<{ rootArtworks: ArtworkP
       description,
       price,
       gallery_id,
+      password,
       is_pinned,
       created_at,
       updated_at,
@@ -33,12 +35,29 @@ async function getArtworks(galleryId?: string): Promise<{ rootArtworks: ArtworkP
     return { rootArtworks: [], galleryArtworks: [] };
   }
 
-  // Add password field as null for client (we don't send actual passwords)
-  const artworks = (data || []).map(a => ({
-    ...a,
-    password: null,
-    gallery: a.gallery ? { ...a.gallery, password: null } : undefined,
-  })) as ArtworkPost[];
+  // Fetch all galleries with passwords for inheritance calculation
+  const { data: allGalleriesRaw } = await supabaseAdmin
+    .from('galleries')
+    .select('id, name, parent_id, password, cover_image_url, created_at');
+
+  // Calculate protection flags and add password field as null for client (we don't send actual passwords)
+  const artworks = (data || []).map(a => {
+    const hasOwnPassword = a.password !== null && a.password.length > 0;
+    // Use fresh galleries data (with passwords) for inheritance calculation
+    const effectivePassword = getEffectivePasswordForPost(
+      { gallery_id: a.gallery_id, password: a.password },
+      allGalleriesRaw || []
+    );
+    const isPasswordProtected = effectivePassword !== null;
+    
+    return {
+      ...a,
+      password: null, // Don't send actual password to client
+      password_protected: isPasswordProtected,
+      hasOwnPassword,
+      gallery: a.gallery ? { ...a.gallery, password: null } : undefined,
+    };
+  }) as ArtworkPost[];
   
   // Get root artworks (those without a gallery)
   const rootArtworks = artworks.filter(a => !a.gallery_id);
@@ -52,7 +71,7 @@ async function getArtworks(galleryId?: string): Promise<{ rootArtworks: ArtworkP
 async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; previewImages?: string[]; subfolderCount?: number; artworkCount?: number })[]> {
   const { data: galleries, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, cover_image_url, created_at')
+    .select('id, name, parent_id, password, cover_image_url, created_at')
     .is('parent_id', null)
     .order('name', { ascending: true });
 
@@ -60,6 +79,11 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
     console.error('Error fetching galleries:', error);
     return [];
   }
+
+  // Fetch all galleries with passwords for inheritance calculation
+  const { data: allGalleriesRaw } = await supabaseAdmin
+    .from('galleries')
+    .select('id, name, parent_id, password, cover_image_url, created_at');
 
   // Fetch cover image, subfolder count, and artwork count for each gallery
   const galleriesWithData = await Promise.all(
@@ -105,9 +129,17 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
         .select('*', { count: 'exact', head: true })
         .eq('gallery_id', gallery.id);
 
+      const hasOwnPassword = gallery.password !== null && gallery.password.length > 0;
+      // Use fresh galleries data (with passwords) for inheritance calculation
+      const effectivePassword = getEffectivePassword(gallery, allGalleriesRaw || []);
+      const isPasswordProtected = effectivePassword !== null;
+      
+      // Ensure flags are always boolean (never undefined)
       return { 
         ...gallery,
         password: null, // Don't send password to client
+        password_protected: Boolean(isPasswordProtected),
+        hasOwnPassword: Boolean(hasOwnPassword),
         coverImageUrl,
         previewImages,
         subfolderCount: subfolderCount || 0,
@@ -122,21 +154,34 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
 async function getAllGalleries(): Promise<Gallery[]> {
   const { data, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, cover_image_url, created_at');
+    .select('id, name, parent_id, password, cover_image_url, created_at');
 
   if (error) {
     console.error('Error fetching all galleries:', error);
     return [];
   }
 
-  // Add password field as null for client (we don't send actual passwords)
-  return (data || []).map(g => ({ ...g, password: null })) as Gallery[];
+  // Calculate protection flags and add password field as null for client (we don't send actual passwords)
+  const galleries = data || [];
+  return galleries.map(g => {
+    const hasOwnPassword = g.password !== null && g.password.length > 0;
+    const effectivePassword = getEffectivePassword(g, galleries);
+    const isPasswordProtected = effectivePassword !== null;
+    
+    // Ensure flags are always boolean (never undefined)
+    return {
+      ...g,
+      password: null, // Don't send actual password to client
+      password_protected: Boolean(isPasswordProtected),
+      hasOwnPassword: Boolean(hasOwnPassword),
+    };
+  }) as Gallery[];
 }
 
-async function getGallery(galleryId: string): Promise<Gallery | null> {
+async function getGallery(galleryId: string, allGalleries: Gallery[] = []): Promise<Gallery | null> {
   const { data, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, cover_image_url, created_at')
+    .select('id, name, parent_id, password, cover_image_url, created_at')
     .eq('id', galleryId)
     .single();
 
@@ -144,13 +189,29 @@ async function getGallery(galleryId: string): Promise<Gallery | null> {
     return null;
   }
 
-  return { ...data, password: null } as Gallery;
+  // Fetch all galleries with passwords for inheritance calculation
+  const { data: allGalleriesRaw } = await supabaseAdmin
+    .from('galleries')
+    .select('id, name, parent_id, password, cover_image_url, created_at');
+
+  const hasOwnPassword = data.password !== null && data.password.length > 0;
+  // Use fresh galleries data (with passwords) for inheritance calculation
+  const effectivePassword = getEffectivePassword(data, allGalleriesRaw || []);
+  const isPasswordProtected = effectivePassword !== null;
+
+  // Ensure flags are always boolean (never undefined)
+  return {
+    ...data,
+    password: null, // Don't send actual password to client
+    password_protected: Boolean(isPasswordProtected),
+    hasOwnPassword: Boolean(hasOwnPassword),
+  } as Gallery;
 }
 
 async function getChildGalleries(parentId: string): Promise<(Gallery & { coverImageUrl?: string; previewImages?: string[]; subfolderCount?: number; artworkCount?: number })[]> {
   const { data: galleries, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, cover_image_url, created_at')
+    .select('id, name, parent_id, password, cover_image_url, created_at')
     .eq('parent_id', parentId)
     .order('name', { ascending: true });
 
@@ -158,6 +219,11 @@ async function getChildGalleries(parentId: string): Promise<(Gallery & { coverIm
     console.error('Error fetching child galleries:', error);
     return [];
   }
+
+  // Fetch all galleries with passwords for inheritance calculation
+  const { data: allGalleriesRaw } = await supabaseAdmin
+    .from('galleries')
+    .select('id, name, parent_id, password, cover_image_url, created_at');
 
   // Fetch cover image, subfolder count, and artwork count for each gallery
   const galleriesWithData = await Promise.all(
@@ -203,9 +269,17 @@ async function getChildGalleries(parentId: string): Promise<(Gallery & { coverIm
         .select('*', { count: 'exact', head: true })
         .eq('gallery_id', gallery.id);
 
+      const hasOwnPassword = gallery.password !== null && gallery.password.length > 0;
+      // Use fresh galleries data (with passwords) for inheritance calculation
+      const effectivePassword = getEffectivePassword(gallery, allGalleriesRaw || []);
+      const isPasswordProtected = effectivePassword !== null;
+      
+      // Ensure flags are always boolean (never undefined)
       return { 
         ...gallery,
         password: null, // Don't send password to client
+        password_protected: Boolean(isPasswordProtected),
+        hasOwnPassword: Boolean(hasOwnPassword),
         coverImageUrl,
         previewImages,
         subfolderCount: subfolderCount || 0,
@@ -304,7 +378,7 @@ export default async function CollectionPage({ searchParams }: CollectionPagePro
               <GalleryBreadcrumbs gallery={gallery} allGalleries={allGalleries} />
               <h2 className="section-title">{gallery.name}</h2>
             </div>
-            <UnifiedCollectionGrid items={items} allGalleries={allGalleries} adminView={adminView} />
+            <CollectionClient items={items} allGalleries={allGalleries} adminView={adminView} />
           </section>
         </main>
 
@@ -359,7 +433,7 @@ export default async function CollectionPage({ searchParams }: CollectionPagePro
           <div className="collection-header">
             <h2 className="section-title">Full Collection</h2>
           </div>
-          <UnifiedCollectionGrid items={items} allGalleries={allGalleries} adminView={adminView} />
+          <CollectionClient items={items} allGalleries={allGalleries} adminView={adminView} />
         </section>
       </main>
 

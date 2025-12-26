@@ -63,6 +63,9 @@ export default function ArtworkCard({ artwork, onTogglePin, onDelete, onManagePa
       {/* Info */}
       <div className="admin-artwork-info">
         <h3 className="admin-artwork-title">{artwork.title}</h3>
+        <div style={{ fontSize: '0.75rem', color: '#78716c', marginTop: '0.25rem', fontFamily: 'monospace' }}>
+          ID: {artwork.id}
+        </div>
         {artwork.description && (
           <p className="admin-artwork-description">
             {stripHtml(artwork.description).slice(0, 100)}

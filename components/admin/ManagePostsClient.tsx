@@ -116,11 +116,12 @@ export default function ManagePostsClient() {
       });
     }
 
-    // Filter galleries by search query
+    // Filter galleries by search query (name or ID)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       displayGalleries = displayGalleries.filter((gallery) =>
-        gallery.name.toLowerCase().includes(query)
+        gallery.name.toLowerCase().includes(query) ||
+        gallery.id.toLowerCase().includes(query)
       );
     }
 
@@ -147,11 +148,12 @@ export default function ManagePostsClient() {
       displayArtworks = displayArtworks.filter((a) => !a.gallery_id);
     }
 
-    // Filter artworks by search query
+    // Filter artworks by search query (title or ID)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       displayArtworks = displayArtworks.filter((artwork) =>
-        artwork.title.toLowerCase().includes(query)
+        artwork.title.toLowerCase().includes(query) ||
+        artwork.id.toLowerCase().includes(query)
       );
     }
 
@@ -502,7 +504,7 @@ export default function ManagePostsClient() {
         <SearchBar
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search by antique or gallery name..."
+          placeholder="Search by name or ID..."
           className="admin-search"
         />
 

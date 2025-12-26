@@ -4,6 +4,7 @@ export interface Gallery {
   parent_id: string | null;
   password: string | null;
   password_protected?: boolean;
+  hasOwnPassword?: boolean;
   cover_image_url: string | null;
   created_at: string;
   children?: Gallery[];
@@ -18,6 +19,7 @@ export interface ArtworkPost {
   gallery_id: string | null;
   password: string | null;
   password_protected?: boolean;
+  hasOwnPassword?: boolean;
   is_pinned: boolean;
   created_at: string;
   updated_at: string;

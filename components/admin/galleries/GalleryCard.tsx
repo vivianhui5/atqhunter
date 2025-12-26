@@ -54,6 +54,9 @@ export default function GalleryCard({ gallery, artworkCount, onDelete, onEdit }:
 
       <div className="admin-gallery-info">
         <h3 className="admin-gallery-title">{gallery.name}</h3>
+        <div style={{ fontSize: '0.75rem', color: '#78716c', marginTop: '0.25rem', fontFamily: 'monospace' }}>
+          ID: {gallery.id}
+        </div>
         <p className="admin-gallery-count">
           {artworkCount} {artworkCount === 1 ? 'artwork' : 'artworks'}
         </p>

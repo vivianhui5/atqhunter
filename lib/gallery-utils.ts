@@ -120,8 +120,8 @@ export function wouldCreateCircularReference(
  * Get the effective password for a gallery (checks parent chain for inheritance)
  */
 export function getEffectivePassword(gallery: Gallery, allGalleries: Gallery[]): string | null {
-  // If gallery has its own password, use it
-  if (gallery.password) {
+  // If gallery has its own password (not null and not empty), use it
+  if (gallery.password !== null && gallery.password.length > 0) {
     return gallery.password;
   }
 
@@ -131,7 +131,7 @@ export function getEffectivePassword(gallery: Gallery, allGalleries: Gallery[]):
     const parent = allGalleries.find((g) => g.id === currentParentId);
     if (!parent) break;
     
-    if (parent.password) {
+    if (parent.password !== null && parent.password.length > 0) {
       return parent.password;
     }
     
