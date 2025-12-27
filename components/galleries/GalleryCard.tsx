@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Gallery } from '@/types/database';
 import { getEffectivePassword } from '@/lib/gallery-utils';
 import { Lock, Copy, Check } from 'lucide-react';
@@ -18,6 +18,7 @@ interface GalleryCardProps {
 
 export default function GalleryCard({ gallery, allGalleries = [], parentUnlocked = false, adminView = false }: GalleryCardProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -99,7 +100,11 @@ export default function GalleryCard({ gallery, allGalleries = [], parentUnlocked
   const showLockOverlay = !adminView && isPasswordProtected && !isUnlocked;
   
   // Gallery cards link to collection page with gallery filter
-  const galleryUrl = `/?gallery=${gallery.id}`;
+  // Preserve public=true parameter if present
+  const isPublicView = searchParams.get('public') === 'true';
+  const galleryUrl = isPublicView 
+    ? `/?gallery=${gallery.id}&public=true`
+    : `/?gallery=${gallery.id}`;
   
   const handlePasswordSubmit = async (password: string) => {
     setIsVerifying(true);
@@ -134,9 +139,10 @@ export default function GalleryCard({ gallery, allGalleries = [], parentUnlocked
         
         setShowPasswordPrompt(false);
         // Navigate to gallery page with unlockedGallery parameter
-        // galleryUrl already has ?gallery=id, so we need to append with &
+        // galleryUrl already has query params, so we need to append with &
         const separator = galleryUrl.includes('?') ? '&' : '?';
-        router.push(`${galleryUrl}${separator}unlockedGallery=${gallery.id}`);
+        const publicParam = isPublicView ? '&public=true' : '';
+        router.push(`${galleryUrl}${separator}unlockedGallery=${gallery.id}${publicParam}`);
       } else {
         setPasswordError('Incorrect password. Please try again.');
       }

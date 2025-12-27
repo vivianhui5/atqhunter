@@ -20,7 +20,7 @@ export default function AdminNavbar() {
         {/* Actions */}
         <div className="admin-actions">
           <a
-            href="/"
+            href="/?public=true"
             target="_blank"
             rel="noopener noreferrer"
             className="admin-action-link"

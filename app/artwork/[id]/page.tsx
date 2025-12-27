@@ -84,9 +84,18 @@ async function getAllGalleries(): Promise<Gallery[]> {
   return (data || []).map(g => ({ ...g, password: null })) as Gallery[];
 }
 
-export default async function ArtworkPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ArtworkPage({ 
+  params, 
+  searchParams 
+}: { 
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ public?: string }>;
+}) {
   const { id } = await params;
-  const adminView = await isAdmin();
+  const params_search = await searchParams;
+  // If public=true query param exists, treat as normal user even if admin
+  const isPublicView = params_search?.public === 'true';
+  const adminView = isPublicView ? false : await isAdmin();
   const [artwork, allGalleries] = await Promise.all([
     getArtwork(id),
     getAllGalleries(),

@@ -218,8 +218,11 @@ async function getAllGalleries(): Promise<Gallery[]> {
   }) as Gallery[];
 }
 
-export default async function HomePage() {
-  const adminView = await isAdmin();
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ public?: string }> }) {
+  const params = await searchParams;
+  // If public=true query param exists, treat as normal user even if admin
+  const isPublicView = params?.public === 'true';
+  const adminView = isPublicView ? false : await isAdmin();
   const allGalleries = await getAllGalleries();
   const { rootArtworks } = await getArtworks();
   const rootGalleries = await getRootGalleries();

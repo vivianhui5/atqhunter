@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArtworkPost, Gallery } from '@/types/database';
 import { isPostPasswordProtected } from '@/lib/gallery-utils';
 import { Lock, Copy, Check } from 'lucide-react';
@@ -18,6 +18,7 @@ interface ArtworkCardProps {
 
 export default function ArtworkCard({ artwork, allGalleries = [], parentUnlocked = false, adminView = false }: ArtworkCardProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -101,24 +102,32 @@ export default function ArtworkCard({ artwork, allGalleries = [], parentUnlocked
   const showLockOverlay = !adminView && isProtected && !isUnlocked;
   
   // Build artwork URL - if parent is unlocked and artwork inherits password, pass gallery ID
-  // Also preserve any existing unlockedGallery parameter from current URL
+  // Also preserve any existing unlockedGallery parameter and public parameter from current URL
+  const isPublicView = searchParams.get('public') === 'true';
   let artworkUrl = `/artwork/${artwork.id}`;
+  const urlParams = new URLSearchParams();
+  
   if (!adminView && parentUnlocked && !hasOwnPassword && artwork.gallery_id) {
     // Get current unlocked gallery from URL if available, otherwise use artwork's gallery
-    const currentUrl = typeof window !== 'undefined' ? window.location.search : '';
-    const params = new URLSearchParams(currentUrl);
-    const existingUnlocked = params.get('unlockedGallery');
+    const existingUnlocked = searchParams.get('unlockedGallery');
     // Use the highest level unlocked gallery (existing or artwork's gallery)
     const unlockedId = existingUnlocked || artwork.gallery_id;
-    artworkUrl = `${artworkUrl}?unlockedGallery=${unlockedId}`;
-  } else if (!adminView && typeof window !== 'undefined') {
+    urlParams.set('unlockedGallery', unlockedId);
+  } else if (!adminView) {
     // Preserve existing unlockedGallery parameter if present
-    const currentUrl = window.location.search;
-    const params = new URLSearchParams(currentUrl);
-    const existingUnlocked = params.get('unlockedGallery');
+    const existingUnlocked = searchParams.get('unlockedGallery');
     if (existingUnlocked) {
-      artworkUrl = `${artworkUrl}?unlockedGallery=${existingUnlocked}`;
+      urlParams.set('unlockedGallery', existingUnlocked);
     }
+  }
+  
+  // Preserve public parameter if present
+  if (isPublicView) {
+    urlParams.set('public', 'true');
+  }
+  
+  if (urlParams.toString()) {
+    artworkUrl = `${artworkUrl}?${urlParams.toString()}`;
   }
   
   const handlePasswordSubmit = async (password: string) => {
@@ -148,7 +157,7 @@ export default function ArtworkCard({ artwork, allGalleries = [], parentUnlocked
         }
         
         setShowPasswordPrompt(false);
-        // Navigate to artwork page
+        // Navigate to artwork page (preserve public parameter if present)
         router.push(artworkUrl);
       } else {
         setPasswordError('Incorrect password. Please try again.');
