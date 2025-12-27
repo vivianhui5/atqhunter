@@ -186,7 +186,7 @@ export default function GalleryCard({ gallery, allGalleries = [], parentUnlocked
         {showLockOverlay && (
           <div className="gallery-lock-overlay-image-only">
             <Lock size={32} />
-            <span className="gallery-lock-text">Password Protected</span>
+            <span className="gallery-lock-text">ID: {gallery.id} is password protected</span>
           </div>
         )}
       </div>

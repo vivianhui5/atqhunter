@@ -204,7 +204,7 @@ export default function ProtectedGalleryContent({
           <div className="password-protected-content">
             <Lock size={64} style={{ color: '#DC2626', marginBottom: '1.5rem' }} />
             <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#1c1917', marginBottom: '0.5rem' }}>
-              Password Protected
+              ID: {gallery.id} is password protected
             </h2>
             <p style={{ fontSize: '1rem', color: '#78716c', marginBottom: '2rem' }}>
               This gallery is password protected. Click below to enter the password.
@@ -223,7 +223,7 @@ export default function ProtectedGalleryContent({
           isOpen={showPasswordPrompt}
           onClose={() => setShowPasswordPrompt(false)}
           onSubmit={handlePasswordSubmit}
-          title={gallery.name}
+          title={gallery.id}
           isVerifying={isVerifying}
           error={passwordError}
         />

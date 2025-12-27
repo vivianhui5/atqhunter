@@ -1,7 +1,15 @@
 import Link from 'next/link';
 import LoginForm from '@/components/auth/LoginForm';
+import { isAdmin } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  // If already authenticated, redirect to admin page
+  const adminAuthenticated = await isAdmin();
+  if (adminAuthenticated) {
+    redirect('/admin');
+  }
+
   return (
     <div className="login-page">
       <div className="login-container">

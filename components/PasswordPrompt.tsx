@@ -44,7 +44,7 @@ export default function PasswordPrompt({
         <div className="password-prompt-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Lock size={24} style={{ color: '#DC2626' }} />
-            <h2>Password Protected</h2>
+            <h2>ID: {title} is password protected</h2>
           </div>
           <button 
             onClick={handleClose} 
@@ -58,7 +58,7 @@ export default function PasswordPrompt({
 
         <form onSubmit={handleSubmit} className="password-prompt-content">
           <p style={{ fontSize: '0.9375rem', lineHeight: '1.6', color: '#57534e', marginBottom: '1.5rem' }}>
-            <strong>&ldquo;{title}&rdquo;</strong> is password protected. Please enter the password to continue.
+            <strong>ID: {title}</strong> is password protected. Please enter the password to continue.
           </p>
 
           <div className="admin-form-group">
