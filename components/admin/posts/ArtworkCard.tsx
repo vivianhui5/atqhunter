@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 
 interface ArtworkCardProps {
   artwork: ArtworkPost;
-  onTogglePin: (id: string, currentPinned: boolean) => void;
   onDelete: (id: string) => void;
   onManagePassword?: (id: string, title: string, currentPassword: string | null) => void;
   draggable?: boolean;

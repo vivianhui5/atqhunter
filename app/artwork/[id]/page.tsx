@@ -20,7 +20,6 @@ async function getArtwork(id: string): Promise<ArtworkPost | null> {
       description,
       price,
       gallery_id,
-      is_pinned,
       display_order,
       created_at,
       updated_at,

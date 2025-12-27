@@ -5,11 +5,10 @@ import ArtworkCard from './ArtworkCard';
 
 interface ArtworkGridProps {
   artworks: ArtworkPost[];
-  onTogglePin: (id: string, currentPinned: boolean) => void;
   onDelete: (id: string) => void;
 }
 
-export default function ArtworkGrid({ artworks, onTogglePin, onDelete }: ArtworkGridProps) {
+export default function ArtworkGrid({ artworks, onDelete }: ArtworkGridProps) {
   if (artworks.length === 0) {
     return (
       <div className="admin-empty-state">
@@ -24,7 +23,6 @@ export default function ArtworkGrid({ artworks, onTogglePin, onDelete }: Artwork
         <ArtworkCard
           key={artwork.id}
           artwork={artwork}
-          onTogglePin={onTogglePin}
           onDelete={onDelete}
         />
       ))}

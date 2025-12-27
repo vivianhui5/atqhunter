@@ -57,7 +57,7 @@ export async function PATCH(
     const { id } = await params;
     const validatedId = validateUUID(id, 'id');
     const body = await request.json();
-    const { title, description, price, gallery_id, is_pinned, password } = body;
+    const { title, description, price, gallery_id, password } = body;
 
     // Validate password if provided
     let passwordValue: string | null | undefined = undefined;
@@ -91,7 +91,6 @@ export async function PATCH(
       description?: string;
       price?: number | null;
       gallery_id?: string | null;
-      is_pinned?: boolean;
       password?: string | null;
     } = {};
 
@@ -111,7 +110,6 @@ export async function PATCH(
         );
       }
     }
-    if (is_pinned !== undefined) updateData.is_pinned = is_pinned;
     if (passwordValue !== undefined) {
       updateData.password = passwordValue;
     }

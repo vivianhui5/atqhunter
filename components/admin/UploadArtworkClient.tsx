@@ -28,7 +28,6 @@ export default function UploadArtworkClient() {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [selectedGallery, setSelectedGallery] = useState('');
-  const [isPinned, setIsPinned] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [galleries, setGalleries] = useState<Gallery[]>([]);
@@ -248,7 +247,6 @@ export default function UploadArtworkClient() {
           description,
           price: price || null,
           gallery_id: selectedGallery || null,
-          is_pinned: isPinned,
           password: password.trim() || null,
           imageUrls,
         }),
@@ -277,7 +275,6 @@ export default function UploadArtworkClient() {
     setDescription('');
     setPrice('');
     setSelectedGallery('');
-    setIsPinned(false);
     clearAllImages();
   };
 
@@ -568,22 +565,6 @@ export default function UploadArtworkClient() {
                 ? 'This post will inherit the gallery password. Set a password here to override it for this post only.'
                 : 'Set a password to protect this post independently. If in a gallery, this overrides the gallery password.'}
             </p>
-          </div>
-
-          {/* Featured */}
-          <div className="admin-form-section">
-            <h3 className="admin-form-label">Featured</h3>
-            <label className="admin-checkbox-wrapper">
-              <input
-                type="checkbox"
-                checked={isPinned}
-                onChange={(e) => setIsPinned(e.target.checked)}
-              />
-              <div className="admin-checkbox-label">
-                <p className="admin-checkbox-title">Pin to homepage</p>
-                <p className="admin-checkbox-description">Featured items appear first</p>
-              </div>
-            </label>
           </div>
 
           {/* Submit */}

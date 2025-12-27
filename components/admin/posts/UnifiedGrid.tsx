@@ -32,7 +32,6 @@ type UnifiedItem =
 
 interface UnifiedGridProps {
   items: UnifiedItem[];
-  onTogglePin: (id: string, currentPinned: boolean) => void;
   onDelete: (id: string) => void;
   onDeleteGallery?: (id: string, name: string) => void;
   onUpdateGalleryName?: (id: string, newName: string) => Promise<void>;
@@ -159,7 +158,6 @@ function SortableArtworkCard({ item, ...props }: { item: UnifiedItem & { type: '
 
 export default function UnifiedGrid({ 
   items, 
-  onTogglePin, 
   onDelete,
   onDeleteGallery,
   onUpdateGalleryName,
@@ -252,7 +250,6 @@ export default function UnifiedGrid({
                 <SortableArtworkCard
                   key={item.id}
                   item={item}
-                  onTogglePin={onTogglePin}
                   onDelete={onDelete}
                   onManagePassword={onManagePostPassword}
                 />

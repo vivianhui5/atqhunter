@@ -37,7 +37,6 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [selectedGallery, setSelectedGallery] = useState('');
-  const [isPinned, setIsPinned] = useState(false);
   const [password, setPassword] = useState('');
   const [galleries, setGalleries] = useState<Gallery[]>([]);
   const [loading, setLoading] = useState(false);
@@ -102,7 +101,6 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
       setDescription(data.artwork.description || '');
       setPrice(data.artwork.price?.toString() || '');
       setSelectedGallery(data.artwork.gallery_id || '');
-      setIsPinned(data.artwork.is_pinned);
       setPassword(data.artwork.password || '');
       
       // Load existing images
@@ -370,7 +368,6 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
           description,
           price: price ? parseFloat(price) : null,
           gallery_id: selectedGallery || null,
-          is_pinned: isPinned,
           password: password.trim() || null,
         }),
       });
@@ -688,22 +685,6 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
                 ? 'This post will inherit the gallery password. Set a password here to override it for this post only.'
                 : 'Set a password to protect this post independently. If in a gallery, this overrides the gallery password.'}
             </p>
-          </div>
-
-          {/* Featured */}
-          <div className="admin-form-section">
-            <h3 className="admin-form-label">Featured</h3>
-            <label className="admin-checkbox-wrapper">
-              <input
-                type="checkbox"
-                checked={isPinned}
-                onChange={(e) => setIsPinned(e.target.checked)}
-              />
-              <div className="admin-checkbox-label">
-                <p className="admin-checkbox-title">Pin to homepage</p>
-                <p className="admin-checkbox-description">Featured items appear first</p>
-              </div>
-            </label>
           </div>
 
           {/* Submit */}

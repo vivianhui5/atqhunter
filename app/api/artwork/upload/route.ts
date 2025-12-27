@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, description, price, gallery_id, is_pinned, imageUrls, password } = body;
+    const { title, description, price, gallery_id, imageUrls, password } = body;
 
     if (!title || !imageUrls || imageUrls.length === 0) {
       return NextResponse.json(
@@ -104,7 +104,6 @@ export async function POST(request: Request) {
           description: description || null,
           price: price ? parseFloat(price) : null,
           gallery_id: gallery_id || null,
-          is_pinned: is_pinned || false,
           password: passwordValue,
         },
       ])

@@ -198,10 +198,6 @@ export default function ManagePostsClient() {
     showToast('Order updated successfully', 'success');
   };
 
-  const togglePin = async (_id: string, _currentPinned: boolean) => {
-    // Removed - no longer using featured/pinned functionality
-    return;
-  };
 
   const deleteArtwork = async (id: string) => {
     if (!confirm('Are you sure you want to delete this artwork?')) return;
@@ -519,7 +515,6 @@ export default function ManagePostsClient() {
         {unifiedItems.length > 0 ? (
           <UnifiedGrid
             items={unifiedItems}
-            onTogglePin={togglePin}
             onReorder={handleReorder}
             onDelete={deleteArtwork}
             onDeleteGallery={handleDeleteGallery}
