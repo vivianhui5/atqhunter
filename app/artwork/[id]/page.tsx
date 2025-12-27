@@ -34,17 +34,38 @@ async function getArtwork(id: string): Promise<ArtworkPost | null> {
     return null;
   }
 
+  // Handle gallery relationship - Supabase may return it as array or object
+  let galleryObj: Gallery | undefined = undefined;
+  if (data.gallery) {
+    // If gallery is an array, take the first item, otherwise use the object
+    const galleryData = Array.isArray(data.gallery) ? data.gallery[0] : data.gallery;
+    if (galleryData && typeof galleryData === 'object' && galleryData !== null && 'id' in galleryData) {
+      const gallery = galleryData as {
+        id: string;
+        name: string;
+        parent_id: string | null;
+        cover_image_url: string | null;
+        display_order: number | null;
+        created_at: string;
+      };
+      galleryObj = {
+        id: gallery.id,
+        name: gallery.name,
+        parent_id: gallery.parent_id ?? null,
+        password: null,
+        cover_image_url: gallery.cover_image_url ?? null,
+        display_order: gallery.display_order ?? null,
+        created_at: gallery.created_at,
+      };
+    }
+  }
+
   // Add password field as null for client (we don't send actual passwords)
-  // Also ensure gallery has password field if it exists
   const artwork: ArtworkPost = {
     ...data,
     password: null,
     display_order: data.display_order ?? null,
-    gallery: data.gallery ? {
-      ...data.gallery,
-      password: null,
-      display_order: data.gallery.display_order ?? null,
-    } : undefined,
+    gallery: galleryObj,
   };
 
   return artwork;
