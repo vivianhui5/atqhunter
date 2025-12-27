@@ -37,10 +37,11 @@ npm install
 npm run dev
 ```
 
-4. Create an admin user:
-```bash
-node scripts/create-admin.js
-```
+4. Create an admin user through Supabase:
+   - Go to Supabase Dashboard → Table Editor → `admin_users`
+   - Insert a new row with `email` and `password_hash`
+   - Generate password hash using: `bcrypt.hash(password, 10)`
+   - Or use the API endpoint: `POST /api/admin/create` (requires server to be running)
 
 ## Project Structure
 
