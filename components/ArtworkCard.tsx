@@ -236,7 +236,7 @@ export default function ArtworkCard({ artwork, allGalleries = [], parentUnlocked
         setPasswordError('');
       }}
       onSubmit={handlePasswordSubmit}
-      title={artwork.title}
+      title={artwork.id}
       isVerifying={isVerifying}
       error={passwordError}
     />

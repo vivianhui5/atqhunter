@@ -229,7 +229,7 @@ export default function GalleryCard({ gallery, allGalleries = [], parentUnlocked
         setPasswordError('');
       }}
       onSubmit={handlePasswordSubmit}
-      title={gallery.name}
+      title={gallery.id}
       isVerifying={isVerifying}
       error={passwordError}
     />
