@@ -41,7 +41,7 @@ export default function AdminGalleryBreadcrumbs({ gallery, allGalleries }: Admin
     <nav className="admin-breadcrumbs" aria-label="Breadcrumb">
       <ol className="admin-breadcrumbs-list">
         <li className="admin-breadcrumb-item">
-          <Link href="/admin/posts" className="admin-breadcrumb-link">
+          <Link href="/admin" className="admin-breadcrumb-link">
             <Home size={16} />
             <span>Home</span>
           </Link>
@@ -55,7 +55,7 @@ export default function AdminGalleryBreadcrumbs({ gallery, allGalleries }: Admin
                 <span className="admin-breadcrumb-current">{g.name}</span>
               ) : (
                 <Link 
-                  href={`/admin/posts?gallery=${g.id}${searchParams.get('search') ? `&search=${searchParams.get('search')}` : ''}`} 
+                  href={`/admin?gallery=${g.id}${searchParams.get('search') ? `&search=${searchParams.get('search')}` : ''}`} 
                   className="admin-breadcrumb-link"
                 >
                   {g.name}

@@ -10,6 +10,7 @@ export async function GET() {
         gallery:galleries(*),
         images:artwork_images(*)
       `)
+      .order('display_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false });
 
     if (error) {

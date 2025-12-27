@@ -1,21 +1,20 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { ArtworkPost, Gallery } from '@/types/database';
 import Navbar from '@/components/navbar/Navbar';
-import FeaturedCarousel from '@/components/home/FeaturedCarousel';
 import Footer from '@/components/Footer';
-import Link from 'next/link';
 import { isAdmin } from '@/lib/auth';
 import { getEffectivePassword, getEffectivePasswordForPost } from '@/lib/gallery-utils';
+import HomeClient from '@/components/home/HomeClient';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-async function getArtworks(): Promise<{ pinned: ArtworkPost[]; rootArtworks: ArtworkPost[] }> {
+async function getArtworks(): Promise<{ rootArtworks: ArtworkPost[] }> {
   try {
     // First, check if supabaseAdmin is properly initialized
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
       console.error('SUPABASE_SERVICE_ROLE_KEY is not set!');
-      return { pinned: [], rootArtworks: [] };
+      return { rootArtworks: [] };
     }
 
     const { data, error } = await supabaseAdmin
@@ -27,13 +26,15 @@ async function getArtworks(): Promise<{ pinned: ArtworkPost[]; rootArtworks: Art
         price,
         gallery_id,
         password,
-        is_pinned,
+        display_order,
         created_at,
         updated_at,
-        gallery:galleries(id, name, parent_id, cover_image_url, created_at),
+        gallery:galleries(id, name, parent_id, cover_image_url, display_order, created_at),
         images:artwork_images(*)
       `)
-      .order('created_at', { ascending: false });
+      .order('display_order', { ascending: true, nullsFirst: false })
+      .order('display_order', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false });
 
     if (error) {
       // Log error details for debugging
@@ -44,23 +45,23 @@ async function getArtworks(): Promise<{ pinned: ArtworkPost[]; rootArtworks: Art
         code: error.code,
         fullError: JSON.stringify(error),
       });
-      return { pinned: [], rootArtworks: [] };
+      return { rootArtworks: [] };
     }
 
     if (!data) {
       console.error('No data returned from Supabase');
-      return { pinned: [], rootArtworks: [] };
+      return { rootArtworks: [] };
     }
 
     if (!Array.isArray(data)) {
       console.error('Data is not an array:', typeof data, data);
-      return { pinned: [], rootArtworks: [] };
+      return { rootArtworks: [] };
     }
 
     // Fetch all galleries with passwords for inheritance calculation
     const { data: allGalleriesRaw } = await supabaseAdmin
       .from('galleries')
-      .select('id, name, parent_id, password, cover_image_url, created_at');
+      .select('id, name, parent_id, password, cover_image_url, display_order, created_at');
 
     // Calculate protection flags and add password field as null for client (we don't send actual passwords)
     const artworks = data.map(a => {
@@ -88,22 +89,22 @@ async function getArtworks(): Promise<{ pinned: ArtworkPost[]; rootArtworks: Art
         gallery: galleryObj,
       };
     }) as ArtworkPost[];
-    const pinned = artworks.filter(a => a.is_pinned);
     // Get root artworks (those without a gallery)
     const rootArtworks = artworks.filter(a => !a.gallery_id);
 
-    return { pinned, rootArtworks };
+    return { rootArtworks };
   } catch (err) {
     console.error('Exception in getArtworks:', err);
-    return { pinned: [], rootArtworks: [] };
+    return { rootArtworks: [] };
   }
 }
 
 async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; previewImages?: string[]; subfolderCount?: number; artworkCount?: number })[]> {
   const { data: galleries, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, password, cover_image_url, created_at')
-    .is('parent_id', null)
+      .select('id, name, parent_id, password, cover_image_url, display_order, created_at')
+      .is('parent_id', null)
+    .order('display_order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -117,7 +118,7 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
   // Fetch all galleries with passwords for inheritance calculation
   const { data: allGalleriesRaw } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, password, cover_image_url, created_at');
+    .select('id, name, parent_id, password, cover_image_url, display_order, created_at');
 
   if (!galleries || !Array.isArray(galleries)) {
     return [];
@@ -175,6 +176,7 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
       // Ensure flags are always boolean (never undefined)
       return { 
         ...gallery,
+        display_order: gallery.display_order ?? null,
         password: null, // Don't send password to client
         password_protected: Boolean(isPasswordProtected),
         hasOwnPassword: Boolean(hasOwnPassword),
@@ -192,7 +194,7 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
 async function getAllGalleries(): Promise<Gallery[]> {
   const { data, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, password, cover_image_url, created_at');
+    .select('id, name, parent_id, password, cover_image_url, display_order, created_at');
 
   if (error) {
     console.error('Error fetching all galleries:', error);
@@ -208,6 +210,7 @@ async function getAllGalleries(): Promise<Gallery[]> {
     
     return {
       ...g,
+      display_order: g.display_order ?? null,
       password: null, // Don't send actual password to client
       password_protected: isPasswordProtected,
       hasOwnPassword,
@@ -218,7 +221,7 @@ async function getAllGalleries(): Promise<Gallery[]> {
 export default async function HomePage() {
   const adminView = await isAdmin();
   const allGalleries = await getAllGalleries();
-  const { pinned, rootArtworks } = await getArtworks();
+  const { rootArtworks } = await getArtworks();
   const rootGalleries = await getRootGalleries();
 
   // Create unified items: galleries first (alphabetically), then posts (alphabetically)
@@ -246,19 +249,27 @@ export default async function HomePage() {
     });
   });
 
-  // Sort: galleries first (alphabetically), then posts (alphabetically)
+  // Sort by display_order (null values go to end, then by created_at as fallback)
   items.sort((a, b) => {
-    if (a.type !== b.type) {
-      return a.type === 'gallery' ? -1 : 1;
+    const aOrder = a.type === 'gallery' 
+      ? (a.data.display_order ?? null)
+      : (a.data.display_order ?? null);
+    const bOrder = b.type === 'gallery'
+      ? (b.data.display_order ?? null)
+      : (b.data.display_order ?? null);
+    
+    // If both have order, sort by order
+    if (aOrder !== null && bOrder !== null) {
+      return aOrder - bOrder;
     }
-    return a.sortKey.localeCompare(b.sortKey);
+    // If only one has order, it comes first
+    if (aOrder !== null) return -1;
+    if (bOrder !== null) return 1;
+    // If neither has order, sort by created_at (newest first)
+    const aDate = a.type === 'gallery' ? a.data.created_at : a.data.created_at;
+    const bDate = b.type === 'gallery' ? b.data.created_at : b.data.created_at;
+    return new Date(bDate).getTime() - new Date(aDate).getTime();
   });
-
-  // Prepare featured items (only pinned artworks)
-  const featuredItems: (ArtworkPost | (Gallery & { coverImageUrl?: string }))[] = [];
-  
-  // Add all pinned artworks only
-  featuredItems.push(...pinned);
 
   return (
     <div className="home-page">
@@ -272,15 +283,15 @@ export default async function HomePage() {
             Explore our curated collection of unique antiques and artworks. 
             Each piece tells a story and brings history to life.
           </p>
-          <Link href="/collection" className="view-collection-button">
-            View Full Collection
-          </Link>
         </section>
 
-        {/* Featured Carousel */}
-        <section className="section-featured">
-          <h2 className="section-title">Featured</h2>
-          <FeaturedCarousel items={featuredItems} allGalleries={allGalleries} adminView={adminView} />
+        {/* Full Collection Section */}
+        <section className="collection-section">
+          <HomeClient 
+            items={items} 
+            allGalleries={allGalleries}
+            adminView={adminView}
+          />
         </section>
       </main>
 

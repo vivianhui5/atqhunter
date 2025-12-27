@@ -17,7 +17,7 @@ export default function GalleryCard({ gallery, artworkCount, onDelete, onEdit }:
   const previewImages = gallery.previewImages || [];
 
   const handleCardClick = () => {
-    router.push(`/admin/galleries/${gallery.id}`);
+    router.push(`/admin?gallery=${gallery.id}`);
   };
 
   const handleActionClick = (e: React.MouseEvent, action: () => void) => {

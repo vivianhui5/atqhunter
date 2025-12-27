@@ -26,11 +26,11 @@ export default function PostsHeader({ onCreateGallery }: PostsHeaderProps) {
           </button>
         )}
         <button
-          onClick={() => router.push('/admin/posts/new')}
+          onClick={() => router.push('/admin/new')}
           className="admin-primary-button"
         >
           <Plus size={18} />
-          <span>Upload Post</span>
+          <span>New Post</span>
         </button>
       </div>
     </div>

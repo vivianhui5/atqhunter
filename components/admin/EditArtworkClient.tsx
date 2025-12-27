@@ -93,7 +93,7 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
       });
       if (!res.ok) {
         showToast('Artwork not found', 'error');
-        router.push('/admin/posts');
+        router.push('/admin');
         return;
       }
 
@@ -117,7 +117,7 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
     } catch (err) {
       console.error('Failed to fetch artwork:', err);
       showToast('Failed to load artwork', 'error');
-      router.push('/admin/posts');
+        router.push('/admin');
     } finally {
       setIsLoadingArtwork(false);
     }
@@ -427,7 +427,7 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
       <div className="admin-form-page">
         <div className="admin-form-page-header">
           <button
-            onClick={() => router.push('/admin/posts')}
+            onClick={() => router.push('/admin')}
             className="admin-back-link"
           >
             <ArrowLeft size={18} />

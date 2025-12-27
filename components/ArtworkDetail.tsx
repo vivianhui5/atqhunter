@@ -20,30 +20,12 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
   
   const images = artwork.images?.sort((a, b) => a.display_order - b.display_order) || [];
 
-  // Calculate initial zoom when image loads (fits in container)
+  // Calculate initial zoom when image loads - start at 100% (natural size)
   // zoom = 1 means image is at its natural/original size (100% of original pixels)
   const handleImageLoad = () => {
     if (imageRef.current && lightboxImageRef.current) {
-      const img = imageRef.current;
-      
-      // Get natural image dimensions (original pixel size)
-      const naturalWidth = img.naturalWidth;
-      const naturalHeight = img.naturalHeight;
-      
-      if (naturalWidth === 0 || naturalHeight === 0) return;
-      
-      // Get container dimensions (accounting for max constraints)
-      const containerWidth = window.innerWidth * 0.9;
-      const containerHeight = window.innerHeight * 0.9;
-      
-      // Calculate scale to fit image in container (maintaining aspect ratio)
-      const scaleX = containerWidth / naturalWidth;
-      const scaleY = containerHeight / naturalHeight;
-      const fitScale = Math.min(scaleX, scaleY, 1); // Don't scale up beyond natural size
-      
-      // zoom = 1 means natural size (100% of original pixels)
-      // Initial zoom is the fit scale (could be < 1 if image is larger than container)
-      setZoom(fitScale); // Start at fit size
+      // Start at 100% zoom (natural size)
+      setZoom(1);
       setPosition({ x: 0, y: 0 });
     }
   };
@@ -157,7 +139,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
           let backText = '← Back to Collection';
           
           if (artwork.gallery) {
-            backHref = `/collection`;
+            backHref = `/`;
             backText = `← Back to Collection`;
           }
           
@@ -255,7 +237,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
               <div className="metadata-item">
                 <span className="metadata-label">Gallery</span>
                 {artwork.gallery ? (
-                  <Link href="/collection" className="metadata-link">
+                  <Link href="/" className="metadata-link">
                     {artwork.gallery.name}
                   </Link>
                 ) : (

@@ -212,28 +212,12 @@ export default function ArtworkCard({ artwork, allGalleries = [], parentUnlocked
         </Link>
         
         {/* Show ID - always visible, not blurred */}
-        <div className="artwork-card-id">
-          <span>ID: {artwork.id}</span>
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              navigator.clipboard.writeText(artwork.id);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            }}
-            className="copy-id-button"
-            title="Copy ID"
-          >
-            {copied ? <Check size={12} /> : <Copy size={12} />}
-          </button>
-        </div>
         
         <div className="artwork-card-gallery-wrapper">
           <span className="gallery-label">From Gallery:</span>{' '}
       {artwork.gallery ? (
         <Link 
-          href="/collection"
+          href="/"
               className="artwork-card-gallery-link"
         >
               {artwork.gallery.name}

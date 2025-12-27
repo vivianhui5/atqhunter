@@ -1,8 +1,22 @@
 import { requireAuth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+import ManagePostsClient from '@/components/admin/ManagePostsClient';
+import { Suspense } from 'react';
+
+function ManagePostsClientWrapper() {
+  return <ManagePostsClient />;
+}
 
 export default async function AdminPage() {
   await requireAuth();
-  redirect('/admin/posts');
+
+  return (
+    <Suspense fallback={
+      <div className="admin-loading-container">
+        <p>Loading...</p>
+      </div>
+    }>
+      <ManagePostsClientWrapper />
+    </Suspense>
+  );
 }
 

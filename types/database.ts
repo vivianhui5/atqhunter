@@ -6,6 +6,7 @@ export interface Gallery {
   password_protected?: boolean;
   hasOwnPassword?: boolean;
   cover_image_url: string | null;
+  display_order: number | null;
   created_at: string;
   children?: Gallery[];
   path?: string; // Full path like "Parent > Child > Grandchild"
@@ -20,7 +21,7 @@ export interface ArtworkPost {
   password: string | null;
   password_protected?: boolean;
   hasOwnPassword?: boolean;
-  is_pinned: boolean;
+  display_order: number | null;
   created_at: string;
   updated_at: string;
   gallery?: Gallery;

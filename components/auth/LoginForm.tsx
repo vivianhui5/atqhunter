@@ -25,12 +25,15 @@ export default function LoginForm() {
 
       if (result?.error) {
         setError('Invalid email or password');
-      } else {
-        router.push('/admin');
+        setLoading(false);
+      } else if (result?.ok) {
+        // Wait a bit for the session cookie to be set
+        await new Promise(resolve => setTimeout(resolve, 100));
+        // Force a hard navigation to ensure session is loaded
+        window.location.href = '/admin';
       }
     } catch {
       setError('An error occurred. Please try again.');
-    } finally {
       setLoading(false);
     }
   };

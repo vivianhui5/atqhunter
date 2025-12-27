@@ -21,45 +21,31 @@ export default function UnifiedCollectionGrid({ items, allGalleries = [], adminV
     );
   }
 
-  // Separate galleries and posts
-  const galleries = items.filter(item => item.type === 'gallery');
-  const posts = items.filter(item => item.type === 'post');
-
+  // Render all items in a single grid, interleaved by display_order
   return (
-    <>
-      {/* Galleries Section */}
-      {galleries.length > 0 && (
-        <div className="unified-collection-grid">
-          {galleries.map((item) => (
+    <div className="unified-collection-grid">
+      {items.map((item) => {
+        if (item.type === 'gallery') {
+          return (
             <GalleryCard
               key={`gallery-${item.data.id}`}
               gallery={item.data}
               allGalleries={allGalleries}
               adminView={adminView}
             />
-          ))}
-        </div>
-      )}
-
-      {/* Divider */}
-      {galleries.length > 0 && posts.length > 0 && (
-        <div className="unified-grid-divider" />
-      )}
-
-      {/* Posts Section */}
-      {posts.length > 0 && (
-        <div className="unified-collection-grid">
-          {posts.map((item) => (
+          );
+        } else {
+          return (
             <ArtworkCard
               key={`post-${item.data.id}`}
               artwork={item.data}
               allGalleries={allGalleries}
               adminView={adminView}
             />
-          ))}
-        </div>
-      )}
-    </>
+          );
+        }
+      })}
+    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Upload, FolderPlus, X, Plus, Loader2, ArrowLeft } from 'lucide-react';
+import { Upload, FolderPlus, X, Plus, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import RichTextEditor from '../RichTextEditor';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -30,6 +30,7 @@ export default function UploadArtworkClient() {
   const [selectedGallery, setSelectedGallery] = useState('');
   const [isPinned, setIsPinned] = useState(false);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [galleries, setGalleries] = useState<Gallery[]>([]);
   const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,7 @@ export default function UploadArtworkClient() {
   const [newGalleryName, setNewGalleryName] = useState('');
   const [selectedParentGallery, setSelectedParentGallery] = useState('');
   const [newGalleryPassword, setNewGalleryPassword] = useState('');
+  const [showNewGalleryPassword, setShowNewGalleryPassword] = useState(false);
   const [creatingGallery, setCreatingGallery] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -255,7 +257,7 @@ export default function UploadArtworkClient() {
       if (res.ok) {
         showToast('Artwork uploaded successfully!', 'success');
         clearForm();
-        setTimeout(() => router.push('/admin/posts'), 1000);
+        setTimeout(() => router.push('/admin'), 1000);
       } else {
         const error = await res.json().catch(() => ({ error: 'Upload failed' }));
         showToast(error.error || 'Upload failed', 'error');
@@ -306,7 +308,7 @@ export default function UploadArtworkClient() {
       <div className="admin-form-page">
         <div className="admin-form-page-header">
           <button
-            onClick={() => router.push('/admin/posts')}
+            onClick={() => router.push('/admin')}
             className="admin-back-link"
           >
             <ArrowLeft size={18} />
@@ -355,13 +357,36 @@ export default function UploadArtworkClient() {
                     />
                   </div>
                   <div style={{ marginTop: '0.75rem' }}>
-                    <input
-                      type="password"
-                      value={newGalleryPassword}
-                      onChange={(e) => setNewGalleryPassword(e.target.value)}
-                      placeholder="Password (optional)"
-                      className="admin-form-input"
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showNewGalleryPassword ? 'text' : 'password'}
+                        value={newGalleryPassword}
+                        onChange={(e) => setNewGalleryPassword(e.target.value)}
+                        placeholder="Password (optional)"
+                        className="admin-form-input"
+                        style={{ paddingRight: '2.5rem' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewGalleryPassword(!showNewGalleryPassword)}
+                        style={{
+                          position: 'absolute',
+                          right: '0.75rem',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#78716c',
+                          padding: '0.25rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                        title={showNewGalleryPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showNewGalleryPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                     <p style={{ fontSize: '0.75rem', color: '#78716c', marginTop: '0.5rem', margin: 0 }}>
                       Set a password to protect this gallery and all its contents
                     </p>
@@ -507,14 +532,37 @@ export default function UploadArtworkClient() {
           {/* Password Protection */}
           <div className="admin-form-section">
             <label htmlFor="password" className="admin-form-label">Password (optional)</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="admin-form-input"
-              placeholder="Leave empty to inherit from gallery or no protection"
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="admin-form-input"
+                placeholder="Leave empty to inherit from gallery or no protection"
+                style={{ paddingRight: '2.5rem' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '0.75rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#78716c',
+                  padding: '0.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             <p className="admin-form-help-text">
               {selectedGallery && isGalleryProtected 
                 ? 'This post will inherit the gallery password. Set a password here to override it for this post only.'

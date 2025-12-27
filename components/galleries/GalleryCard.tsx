@@ -99,7 +99,7 @@ export default function GalleryCard({ gallery, allGalleries = [], parentUnlocked
   const showLockOverlay = !adminView && isPasswordProtected && !isUnlocked;
   
   // Gallery cards link to collection page with gallery filter
-  const galleryUrl = `/collection?gallery=${gallery.id}`;
+  const galleryUrl = `/?gallery=${gallery.id}`;
   
   const handlePasswordSubmit = async (password: string) => {
     setIsVerifying(true);
@@ -200,22 +200,6 @@ export default function GalleryCard({ gallery, allGalleries = [], parentUnlocked
           </div>
         </div>
         {/* Show ID - always visible, not blurred, below the title */}
-        <div className="gallery-card-id">
-          <span>ID: {gallery.id}</span>
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              navigator.clipboard.writeText(gallery.id);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            }}
-            className="copy-id-button"
-            title="Copy ID"
-          >
-            {copied ? <Check size={12} /> : <Copy size={12} />}
-          </button>
-        </div>
         <span className="gallery-card-arrow">→</span>
         <div className="gallery-card-meta">
           {subfolderCount > 0 && (

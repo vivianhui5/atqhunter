@@ -82,11 +82,11 @@ export default function ManagePostsClient() {
     }
   }, [galleryId, galleries]);
 
-  // Get unified items (galleries + posts) sorted alphabetically
+  // Get unified items (galleries + posts) sorted by display_order
   const unifiedItems = useMemo(() => {
     type UnifiedItem = 
-      | { type: 'gallery'; data: Gallery & { previewImages?: string[] }; artworkCount: number; subfolderCount?: number; sortKey: string }
-      | { type: 'post'; data: ArtworkPost; sortKey: string };
+      | { type: 'gallery'; data: Gallery & { previewImages?: string[] }; artworkCount: number; subfolderCount?: number; id: string }
+      | { type: 'post'; data: ArtworkPost; id: string };
 
     const items: UnifiedItem[] = [];
 
@@ -134,7 +134,7 @@ export default function ManagePostsClient() {
         data: gallery,
         artworkCount,
         subfolderCount,
-        sortKey: gallery.name.toLowerCase(),
+        id: gallery.id,
       });
     });
 
@@ -162,38 +162,45 @@ export default function ManagePostsClient() {
       items.push({
         type: 'post',
         data: artwork,
-        sortKey: artwork.title.toLowerCase(),
+        id: artwork.id,
       });
     });
 
-    // Sort: galleries first (alphabetically), then posts (alphabetically)
+    // Sort by display_order (null values go to end, then by created_at as fallback)
     items.sort((a, b) => {
-      // If types are different, galleries come first
-      if (a.type !== b.type) {
-        return a.type === 'gallery' ? -1 : 1;
+      const aOrder = a.type === 'gallery' 
+        ? (a.data.display_order ?? null)
+        : (a.data.display_order ?? null);
+      const bOrder = b.type === 'gallery'
+        ? (b.data.display_order ?? null)
+        : (b.data.display_order ?? null);
+      
+      // If both have order, sort by order
+      if (aOrder !== null && bOrder !== null) {
+        return aOrder - bOrder;
       }
-      // If same type, sort alphabetically
-      return a.sortKey.localeCompare(b.sortKey);
+      // If only one has order, it comes first
+      if (aOrder !== null) return -1;
+      if (bOrder !== null) return 1;
+      // If neither has order, sort by created_at (newest first)
+      const aDate = a.type === 'gallery' ? a.data.created_at : a.data.created_at;
+      const bDate = b.type === 'gallery' ? b.data.created_at : b.data.created_at;
+      return new Date(bDate).getTime() - new Date(aDate).getTime();
     });
 
     return items;
   }, [galleries, artworks, currentGallery, searchQuery]);
 
-  const togglePin = async (id: string, currentPinned: boolean) => {
-    try {
-      const res = await fetch(`/api/artwork/${id}/pin`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_pinned: !currentPinned }),
-      });
+  const handleReorder = async () => {
+    // Refetch to get updated data
+    await fetchGalleries();
+    await fetchArtworks();
+    showToast('Order updated successfully', 'success');
+  };
 
-      if (res.ok) {
-        showToast(currentPinned ? 'Artwork unpinned' : 'Artwork pinned!', 'success');
-        fetchArtworks();
-      }
-    } catch {
-      showToast('Failed to update pin status', 'error');
-    }
+  const togglePin = async (_id: string, _currentPinned: boolean) => {
+    // Removed - no longer using featured/pinned functionality
+    return;
   };
 
   const deleteArtwork = async (id: string) => {
@@ -394,9 +401,9 @@ export default function ManagePostsClient() {
           if (parentGallery) {
             const params = new URLSearchParams();
             params.set('gallery', parentGallery.id);
-            window.location.href = `/admin/posts?${params.toString()}`;
+            window.location.href = `/admin?${params.toString()}`;
           } else {
-            window.location.href = '/admin/posts';
+            window.location.href = '/admin';
           }
         }
         
@@ -445,9 +452,9 @@ export default function ManagePostsClient() {
             if (targetGalleryId) {
               const params = new URLSearchParams();
               params.set('gallery', targetGalleryId);
-              window.location.href = `/admin/posts?${params.toString()}`;
+              window.location.href = `/admin?${params.toString()}`;
             } else {
-              window.location.href = '/admin/posts';
+              window.location.href = '/admin';
             }
           }
         } else {
@@ -513,6 +520,7 @@ export default function ManagePostsClient() {
           <UnifiedGrid
             items={unifiedItems}
             onTogglePin={togglePin}
+            onReorder={handleReorder}
             onDelete={deleteArtwork}
             onDeleteGallery={handleDeleteGallery}
             onUpdateGalleryName={handleUpdateGalleryName}

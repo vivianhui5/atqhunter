@@ -7,7 +7,10 @@ const nextConfig = {
         hostname: '**',
       },
     ],
-    formats: ['image/avif', 'image/webp'],
+    // Disable automatic format conversion to preserve original image quality
+    // formats: ['image/avif', 'image/webp'],
+    // Use unoptimized images to prevent compression
+    unoptimized: false, // Keep optimization for performance, but we'll use unoptimized prop on specific images
   },
   async headers() {
     return [

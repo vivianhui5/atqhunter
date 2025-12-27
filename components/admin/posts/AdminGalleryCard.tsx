@@ -52,7 +52,7 @@ export default function AdminGalleryCard({
     if (!isEditing) {
       const params = new URLSearchParams(searchParams.toString());
       params.set('gallery', gallery.id);
-      router.push(`/admin/posts?${params.toString()}`);
+      router.push(`/admin?${params.toString()}`);
     }
   };
 
@@ -216,7 +216,10 @@ export default function AdminGalleryCard({
           </div>
         ) : (
           <>
-            <h3 className="admin-gallery-card-title">{gallery.name}</h3>
+            <div className="admin-gallery-card-header">
+              <span className="admin-gallery-card-badge">Gallery</span>
+              <h3 className="admin-gallery-card-title">{gallery.name}</h3>
+            </div>
             <div className="admin-gallery-card-meta">
               {subfolderCount > 0 && (
                 <span className="admin-gallery-card-meta-item">
@@ -235,7 +238,6 @@ export default function AdminGalleryCard({
                 <span className="admin-gallery-card-meta-empty">Empty</span>
               )}
             </div>
-            <span className="admin-gallery-card-arrow">→</span>
           </>
         )}
       </div>
