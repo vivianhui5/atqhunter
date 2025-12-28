@@ -167,7 +167,7 @@ export default function GalleryCard({ gallery, allGalleries = [], parentUnlocked
     <Link 
       href={galleryUrl} 
       className="gallery-card" 
-      style={{ position: 'relative', cursor: showLockOverlay ? 'pointer' : 'default' }}
+      style={{ position: 'relative', cursor: 'pointer' }}
       onClick={handleCardClick}
     >
       {/* Cover Image */}

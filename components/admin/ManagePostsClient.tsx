@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
+import { useState, useEffect, useCallback, Suspense, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AdminLayout from './layout/AdminLayout';
 import PostsHeader from './posts/PostsHeader';
@@ -11,7 +11,6 @@ import NewGalleryModal from './galleries/NewGalleryModal';
 import DeleteGalleryModal from './galleries/DeleteGalleryModal';
 import PasswordModal from './galleries/PasswordModal';
 import CoverImageSelector from './galleries/CoverImageSelector';
-import SearchBar from '@/components/SearchBar';
 import { ArtworkPost, Gallery } from '@/types/database';
 
 interface Toast {
@@ -39,6 +38,7 @@ export default function ManagePostsClient() {
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [coverImageModalOpen, setCoverImageModalOpen] = useState(false);
   const [galleryForCoverImage, setGalleryForCoverImage] = useState<{ id: string; name: string; currentCoverImage: string | null; availableImages: string[] } | null>(null);
+  const prevGalleryIdRef = useRef<string | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();
@@ -74,12 +74,19 @@ export default function ManagePostsClient() {
 
   // Set current gallery when galleryId changes
   useEffect(() => {
+    // Clear search query when navigating to a different gallery
+    if (prevGalleryIdRef.current !== galleryId) {
+      setSearchQuery('');
+      prevGalleryIdRef.current = galleryId;
+    }
+    
     if (galleryId && galleries.length > 0) {
       const gallery = galleries.find((g) => g.id === galleryId);
       setCurrentGallery(gallery || null);
-    } else {
+    } else if (!galleryId) {
       setCurrentGallery(null);
     }
+    // If galleryId exists but galleries haven't loaded yet, keep currentGallery as is
   }, [galleryId, galleries]);
 
   // Get unified items (galleries + posts) sorted by display_order
@@ -195,7 +202,7 @@ export default function ManagePostsClient() {
     // Refetch to get updated data
     await fetchGalleries();
     await fetchArtworks();
-    showToast('Order updated successfully', 'success');
+    // Toast removed - reordering happens silently
   };
 
 
@@ -477,7 +484,11 @@ export default function ManagePostsClient() {
       </div>
 
       <div className="admin-page-container">
-        <PostsHeader onCreateGallery={() => setShowNewGalleryModal(true)} />
+        <PostsHeader 
+          onCreateGallery={() => setShowNewGalleryModal(true)}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
         
         {/* Breadcrumbs */}
         <Suspense fallback={<div className="admin-breadcrumbs">Loading...</div>}>
@@ -503,13 +514,6 @@ export default function ManagePostsClient() {
             />
           );
         })()}
-        
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search by name or ID..."
-          className="admin-search"
-        />
 
         {/* Unified Grid - Galleries and Posts together */}
         {unifiedItems.length > 0 ? (

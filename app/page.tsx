@@ -5,6 +5,9 @@ import Footer from '@/components/Footer';
 import { isAdmin } from '@/lib/auth';
 import { getEffectivePassword, getEffectivePasswordForPost } from '@/lib/gallery-utils';
 import HomeClient from '@/components/home/HomeClient';
+import ContactUsButton from '@/components/ContactUsButton';
+import ProtectedGalleryContent from '@/components/galleries/ProtectedGalleryContent';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -218,12 +221,210 @@ async function getAllGalleries(): Promise<Gallery[]> {
   }) as Gallery[];
 }
 
-export default async function HomePage({ searchParams }: { searchParams: Promise<{ public?: string }> }) {
+async function getGalleryById(galleryId: string, allGalleries: Gallery[]): Promise<Gallery | null> {
+  const { data, error } = await supabaseAdmin
+    .from('galleries')
+    .select('id, name, parent_id, password, cover_image_url, display_order, created_at')
+    .eq('id', galleryId)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  const hasOwnPassword = data.password !== null && data.password.length > 0;
+  const effectivePassword = getEffectivePassword(data, allGalleries);
+  const isPasswordProtected = effectivePassword !== null;
+
+  return {
+    ...data,
+    password: null,
+    display_order: data.display_order ?? null,
+    password_protected: Boolean(isPasswordProtected),
+    hasOwnPassword: Boolean(hasOwnPassword),
+  } as Gallery;
+}
+
+async function getGalleryArtworks(galleryId: string): Promise<ArtworkPost[]> {
+  const { data, error } = await supabaseAdmin
+    .from('artwork_posts')
+    .select(`
+      id,
+      title,
+      description,
+      price,
+      gallery_id,
+      password,
+      display_order,
+      created_at,
+      updated_at,
+      gallery:galleries(id, name, parent_id, cover_image_url, display_order, created_at),
+      images:artwork_images(*)
+    `)
+    .eq('gallery_id', galleryId)
+    .order('display_order', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false });
+
+  if (error || !data) {
+    return [];
+  }
+
+  const allGalleriesRaw = await supabaseAdmin
+    .from('galleries')
+    .select('id, name, parent_id, password, cover_image_url, display_order, created_at');
+
+  return data.map(a => {
+    let galleryObj = null;
+    if (a.gallery) {
+      galleryObj = Array.isArray(a.gallery) ? a.gallery[0] : a.gallery;
+      galleryObj = { ...galleryObj, password: null };
+    }
+    
+    const hasOwnPassword = a.password !== null && a.password.length > 0;
+    const effectivePassword = getEffectivePasswordForPost(
+      { gallery_id: a.gallery_id, password: a.password },
+      allGalleriesRaw.data || []
+    );
+    const isPasswordProtected = effectivePassword !== null;
+    
+    return {
+      ...a,
+      password: null,
+      password_protected: isPasswordProtected,
+      hasOwnPassword,
+      gallery: galleryObj,
+    };
+  }) as ArtworkPost[];
+}
+
+async function getChildGalleries(parentId: string): Promise<(Gallery & { coverImageUrl?: string; previewImages?: string[]; subfolderCount?: number; artworkCount?: number })[]> {
+  const { data: galleries, error } = await supabaseAdmin
+    .from('galleries')
+    .select('id, name, parent_id, password, cover_image_url, display_order, created_at')
+    .eq('parent_id', parentId)
+    .order('display_order', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false });
+
+  if (error || !galleries || !Array.isArray(galleries)) {
+    return [];
+  }
+
+  const allGalleriesRaw = await supabaseAdmin
+    .from('galleries')
+    .select('id, name, parent_id, password, cover_image_url, display_order, created_at');
+
+  const galleriesWithData = await Promise.all(
+    galleries.map(async (gallery) => {
+      let coverImageUrl = gallery.cover_image_url;
+      
+      if (!coverImageUrl) {
+        const { data: firstArtwork } = await supabaseAdmin
+          .from('artwork_posts')
+          .select('images:artwork_images(image_url, display_order)')
+          .eq('gallery_id', gallery.id)
+          .limit(1)
+          .single();
+        
+        if (firstArtwork?.images && Array.isArray(firstArtwork.images) && firstArtwork.images.length > 0) {
+          const sortedImages = firstArtwork.images.sort((a: { display_order: number }, b: { display_order: number }) => a.display_order - b.display_order);
+          coverImageUrl = sortedImages[0]?.image_url || null;
+        }
+      }
+
+      const { data: artworks } = await supabaseAdmin
+        .from('artwork_posts')
+        .select('images:artwork_images(image_url)')
+        .eq('gallery_id', gallery.id)
+        .limit(4);
+
+      const previewImages = artworks
+        ?.flatMap(a => a.images?.map(img => img.image_url) || [])
+        .filter(Boolean)
+        .slice(0, 4) || [];
+
+      const { count: subfolderCount } = await supabaseAdmin
+        .from('galleries')
+        .select('*', { count: 'exact', head: true })
+        .eq('parent_id', gallery.id);
+
+      const { count: artworkCount } = await supabaseAdmin
+        .from('artwork_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('gallery_id', gallery.id);
+
+      const hasOwnPassword = gallery.password !== null && gallery.password.length > 0;
+      const effectivePassword = getEffectivePassword(gallery, allGalleriesRaw.data || []);
+      const isPasswordProtected = effectivePassword !== null;
+      
+      return { 
+        ...gallery,
+        display_order: gallery.display_order ?? null,
+        password: null,
+        password_protected: Boolean(isPasswordProtected),
+        hasOwnPassword: Boolean(hasOwnPassword),
+        coverImageUrl,
+        previewImages,
+        subfolderCount: subfolderCount || 0,
+        artworkCount: artworkCount || 0
+      };
+    })
+  );
+
+  return galleriesWithData;
+}
+
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ public?: string; gallery?: string }> }) {
   const params = await searchParams;
   // If public=true query param exists, treat as normal user even if admin
   const isPublicView = params?.public === 'true';
   const adminView = isPublicView ? false : await isAdmin();
   const allGalleries = await getAllGalleries();
+  
+  // Check if we're viewing a specific gallery
+  const galleryId = params?.gallery;
+  
+  if (galleryId) {
+    // Fetch gallery and its contents
+    const gallery = await getGalleryById(galleryId, allGalleries);
+    if (!gallery) {
+      // Gallery not found, show home page
+      return redirect('/');
+    }
+    
+    const childGalleries = await getChildGalleries(galleryId);
+    const artworks = await getGalleryArtworks(galleryId);
+    
+    // Get preview images for the gallery
+    const { data: previewArtworks } = await supabaseAdmin
+      .from('artwork_posts')
+      .select('images:artwork_images(image_url)')
+      .eq('gallery_id', galleryId)
+      .limit(4);
+    
+    const previewImages = previewArtworks
+      ?.flatMap(a => a.images?.map(img => img.image_url) || [])
+      .filter(Boolean)
+      .slice(0, 4) || [];
+    
+    return (
+      <div className="home-page">
+        <Navbar />
+        <main className="main-content">
+          <ProtectedGalleryContent
+            gallery={gallery}
+            allGalleries={allGalleries}
+            childGalleries={childGalleries}
+            artworks={artworks}
+            previewImages={previewImages}
+            adminView={adminView}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+  
+  // Show home page with all galleries and artworks
   const { rootArtworks } = await getArtworks();
   const rootGalleries = await getRootGalleries();
 
@@ -283,9 +484,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <section className="welcome-section">
           <h1 className="welcome-title">Welcome</h1>
           <p className="welcome-description">
-            Explore our curated collection of unique antiques and artworks. 
-            Each piece tells a story and brings history to life.
+          This gallery showcases some of my Asian artwork collections over 20 years. Please click on each category gallery to see collections. Most artwork are marked with prices, but if you are interested in any collection, please contact me.
           </p>
+          <p className="welcome-description">
+          这是本人多年下来的部分藏品. 我尽力描述准确. 对于藏品的年代和作者, 我都从各方面考虑, 力求精确. 每一件藏品, 都有我大量的考椐工作. 请点击小面小图以浏览各个藏品. 藏品介绍用中英文标出. 多数藏品有标价, 但如果你对任何一件艺术品感兴趣， 请联系我们          </p>
+          <ContactUsButton />
         </section>
 
         {/* Full Collection Section */}

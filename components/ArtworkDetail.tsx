@@ -396,6 +396,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
         isOpen={showInquiry}
         onClose={() => setShowInquiry(false)}
         artworkTitle={artwork.title}
+        artworkId={artwork.id}
       />
     </div>
   );

@@ -9,12 +9,14 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
 } from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import {
   useSortable,
@@ -58,10 +60,9 @@ function SortableGalleryCard({ item, ...props }: { item: UnifiedItem & { type: '
   const style = {
     transform: CSS.Transform.toString(transform),
     transition: isDragging ? 'none' : transition,
-    opacity: isDragging ? 0.6 : 1,
+    opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 1000 : 1,
     boxShadow: isDragging ? '0 8px 24px rgba(0, 0, 0, 0.2)' : 'none',
-    cursor: isDragging ? 'grabbing' : 'default',
   };
 
   return (
@@ -69,7 +70,10 @@ function SortableGalleryCard({ item, ...props }: { item: UnifiedItem & { type: '
       ref={setNodeRef} 
       {...attributes}
       {...listeners}
-      style={{ ...style, cursor: isDragging ? 'grabbing' : 'grab' }} 
+      style={{
+        ...style,
+        cursor: isDragging ? 'grabbing' : 'grab',
+      }}
       className={isDragging ? 'dragging-item' : ''}
     >
       <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.5rem' }}>
@@ -115,10 +119,9 @@ function SortableArtworkCard({ item, ...props }: { item: UnifiedItem & { type: '
   const style = {
     transform: CSS.Transform.toString(transform),
     transition: isDragging ? 'none' : transition,
-    opacity: isDragging ? 0.6 : 1,
+    opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 1000 : 1,
     boxShadow: isDragging ? '0 8px 24px rgba(0, 0, 0, 0.2)' : 'none',
-    cursor: isDragging ? 'grabbing' : 'default',
   };
 
   return (
@@ -126,7 +129,10 @@ function SortableArtworkCard({ item, ...props }: { item: UnifiedItem & { type: '
       ref={setNodeRef} 
       {...attributes}
       {...listeners}
-      style={{ ...style, cursor: isDragging ? 'grabbing' : 'grab' }} 
+      style={{
+        ...style,
+        cursor: isDragging ? 'grabbing' : 'grab',
+      }}
       className={isDragging ? 'dragging-item' : ''}
     >
       <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.5rem' }}>
@@ -170,6 +176,7 @@ export default function UnifiedGrid({
   currentGalleryId: _currentGalleryId = null
 }: UnifiedGridProps) {
   const [localItems, setLocalItems] = useState<UnifiedItem[]>(items);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   // Update local items when props change
   React.useEffect(() => {
@@ -179,7 +186,7 @@ export default function UnifiedGrid({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Require 8px of movement before drag starts
+        distance: 3, // Reduced from 8px to 3px for faster response
       },
     }),
     useSensor(KeyboardSensor, {
@@ -187,8 +194,13 @@ export default function UnifiedGrid({
     })
   );
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveId(null);
 
     if (over && active.id !== over.id) {
       const oldIndex = localItems.findIndex(item => item.id === active.id);
@@ -221,6 +233,8 @@ export default function UnifiedGrid({
     }
   };
 
+  const activeItem = activeId ? localItems.find(item => item.id === activeId) : null;
+
   if (localItems.length === 0) {
     return null;
   }
@@ -229,9 +243,10 @@ export default function UnifiedGrid({
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext items={localItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext items={localItems.map(item => item.id)} strategy={rectSortingStrategy}>
         <div className="admin-unified-grid">
           {localItems.map((item) => {
             if (item.type === 'gallery') {
@@ -258,6 +273,68 @@ export default function UnifiedGrid({
           })}
         </div>
       </SortableContext>
+      <DragOverlay>
+        {activeItem ? (
+          <div style={{ 
+            opacity: 0.9,
+            transform: 'rotate(2deg)',
+            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.3)',
+            cursor: 'grabbing',
+          }}>
+            {activeItem.type === 'gallery' ? (
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.5rem' }}>
+                <div
+                  className="drag-handle"
+                  style={{
+                    padding: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: '#1c1917',
+                    alignSelf: 'flex-start',
+                    marginTop: '0.5rem',
+                  }}
+                >
+                  <GripVertical size={18} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <AdminGalleryCard
+                    gallery={activeItem.data}
+                    artworkCount={activeItem.artworkCount}
+                    subfolderCount={activeItem.subfolderCount}
+                    onUpdateName={onUpdateGalleryName}
+                    onDelete={onDeleteGallery}
+                    onManagePassword={onManageGalleryPassword}
+                    onEditCoverImage={onEditGalleryCoverImage}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.5rem' }}>
+                <div
+                  className="drag-handle"
+                  style={{
+                    padding: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: '#1c1917',
+                    alignSelf: 'flex-start',
+                    marginTop: '0.5rem',
+                  }}
+                >
+                  <GripVertical size={18} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <ArtworkCard
+                    artwork={activeItem.data}
+                    onDelete={onDelete}
+                    onManagePassword={onManagePostPassword}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }

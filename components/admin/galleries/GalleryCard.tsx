@@ -15,6 +15,7 @@ interface GalleryCardProps {
 export default function GalleryCard({ gallery, artworkCount, onDelete, onEdit }: GalleryCardProps) {
   const router = useRouter();
   const previewImages = gallery.previewImages || [];
+  const coverImageUrl = gallery.cover_image_url;
 
   const handleCardClick = () => {
     router.push(`/admin?gallery=${gallery.id}`);
@@ -27,8 +28,18 @@ export default function GalleryCard({ gallery, artworkCount, onDelete, onEdit }:
 
   return (
     <div className="admin-gallery-card clickable" onClick={handleCardClick}>
-      {/* Image Preview Grid */}
-      {previewImages.length > 0 ? (
+      {/* Cover Image or Preview Grid */}
+      {coverImageUrl ? (
+        <div className="admin-gallery-cover-image">
+          <Image
+            src={coverImageUrl}
+            alt={gallery.name}
+            fill
+            className="object-contain"
+            sizes="200px"
+          />
+        </div>
+      ) : previewImages.length > 0 ? (
         <div className="admin-gallery-preview-grid">
           {previewImages.slice(0, 4).map((imageUrl, index) => (
             <div key={index} className="admin-gallery-preview-image">

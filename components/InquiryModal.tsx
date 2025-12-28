@@ -6,12 +6,12 @@ import { X, Loader2 } from 'lucide-react';
 interface InquiryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  artworkTitle: string;
+  artworkTitle?: string;
+  artworkId?: string;
 }
 
-export default function InquiryModal({ isOpen, onClose, artworkTitle }: InquiryModalProps) {
+export default function InquiryModal({ isOpen, onClose, artworkTitle, artworkId }: InquiryModalProps) {
   const [email, setEmail] = useState('');
-  const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -30,9 +30,10 @@ export default function InquiryModal({ isOpen, onClose, artworkTitle }: InquiryM
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           senderEmail: email,
-          subject,
+          subject: artworkTitle ? `Inquiry about ${artworkTitle}` : 'General Inquiry',
           message,
-          artworkTitle,
+          artworkTitle: artworkTitle || '',
+          artworkId: artworkId || '',
         }),
       });
 
@@ -42,7 +43,6 @@ export default function InquiryModal({ isOpen, onClose, artworkTitle }: InquiryM
           onClose();
           setSuccess(false);
           setEmail('');
-          setSubject('');
           setMessage('');
         }, 8000); // Increased from 2000ms to 8000ms (8 seconds)
       } else {
@@ -89,10 +89,6 @@ export default function InquiryModal({ isOpen, onClose, artworkTitle }: InquiryM
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="inquiry-form">
-            <div className="inquiry-artwork-info">
-              Regarding: <strong>{artworkTitle}</strong>
-            </div>
-
             {error && (
               <div className="inquiry-error">
                 {error}
@@ -116,22 +112,6 @@ export default function InquiryModal({ isOpen, onClose, artworkTitle }: InquiryM
             </div>
 
             <div className="inquiry-form-group">
-              <label htmlFor="inquiry-subject" className="inquiry-label">
-                Subject / 标题 *
-              </label>
-              <input
-                id="inquiry-subject"
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="e.g., Purchase inquiry, Questions about the piece"
-                className="inquiry-input"
-                required
-                disabled={sending}
-              />
-            </div>
-
-            <div className="inquiry-form-group">
               <label htmlFor="inquiry-message" className="inquiry-label">
                 Message  / 短信*
               </label>
@@ -139,7 +119,7 @@ export default function InquiryModal({ isOpen, onClose, artworkTitle }: InquiryM
                 id="inquiry-message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Hi, I'm interested in this artwork..."
+                placeholder="Hi, I'd like to get in touch..."
                 className="inquiry-textarea"
                 rows={6}
                 required

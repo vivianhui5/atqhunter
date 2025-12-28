@@ -66,10 +66,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const { senderEmail, subject, message, artworkTitle } = await request.json();
+    const { senderEmail, subject, message, artworkTitle, artworkId } = await request.json();
 
     // Validate inputs
-    if (!senderEmail || !subject || !message || !artworkTitle) {
+    if (!senderEmail || !subject || !message) {
       return NextResponse.json(
         { error: 'All fields are required' },
         { status: 400 }
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (artworkTitle.length > 500) {
+    if (artworkTitle && artworkTitle.length > 500) {
       return NextResponse.json(
         { error: 'Invalid artwork title' },
         { status: 400 }
@@ -110,8 +110,18 @@ export async function POST(request: Request) {
     // Sanitize all user inputs
     const safeSubject = escapeHtml(subject);
     const safeMessage = sanitizeMessage(message);
-    const safeArtworkTitle = escapeHtml(artworkTitle);
+    const safeArtworkTitle = artworkTitle ? escapeHtml(artworkTitle) : '';
     const safeSenderEmail = escapeHtml(senderEmail);
+    
+    // Get base URL for artwork link
+    const origin = request.headers.get('origin');
+    const host = request.headers.get('host');
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                    origin || 
+                    (host ? (host.includes('localhost') ? `http://${host}` : `https://${host}`) : '');
+    const artworkLink = artworkId && artworkTitle 
+      ? `${baseUrl}/artwork/${artworkId}` 
+      : null;
 
     // Send email using Resend
     try {
@@ -128,9 +138,12 @@ export async function POST(request: Request) {
             </h2>
             
             <div style="margin: 20px 0; padding: 15px; background: #f5f5f4; border-radius: 8px;">
-              <p style="margin: 5px 0;"><strong>Antique:</strong> ${safeArtworkTitle}</p>
-              <p style="margin: 5px 0;"><strong>From:</strong> ${safeSenderEmail}</p>
-              <p style="margin: 5px 0;"><strong>Subject:</strong> ${safeSubject}</p>
+              ${safeArtworkTitle ? `
+                <p style="margin: 8px 0;"><strong>Artwork:</strong> ${safeArtworkTitle}</p>
+                ${artworkLink ? `<p style="margin: 8px 0;"><strong>View Artwork:</strong> <a href="${artworkLink}" style="color: #3b82f6; text-decoration: underline; word-break: break-all;">${artworkLink}</a></p>` : ''}
+              ` : ''}
+              <p style="margin: 8px 0;"><strong>From:</strong> ${safeSenderEmail}</p>
+              <p style="margin: 8px 0;"><strong>Subject:</strong> ${safeSubject}</p>
             </div>
             
             <div style="margin: 20px 0;">
