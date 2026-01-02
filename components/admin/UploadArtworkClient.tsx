@@ -40,6 +40,7 @@ export default function UploadArtworkClient() {
   const [newGalleryPassword, setNewGalleryPassword] = useState('');
   const [showNewGalleryPassword, setShowNewGalleryPassword] = useState(false);
   const [creatingGallery, setCreatingGallery] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const isSubmittingRef = useRef(false);
@@ -175,6 +176,27 @@ export default function UploadArtworkClient() {
   const clearAllImages = () => {
     imageFiles.forEach((img) => URL.revokeObjectURL(img.preview));
     setImageFiles([]);
+  };
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const newImages = [...imageFiles];
+    const draggedItem = newImages[draggedIndex];
+    newImages.splice(draggedIndex, 1);
+    newImages.splice(index, 0, draggedItem);
+
+    setDraggedIndex(index);
+    setImageFiles(newImages);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
   };
 
   const uploadImageToR2 = async (file: File, fileName: string): Promise<string> => {
@@ -488,7 +510,19 @@ export default function UploadArtworkClient() {
                 </div>
                 <div className="admin-image-preview-grid">
                   {imageFiles.map((img, index) => (
-                    <div key={img.id} className="admin-image-preview-item">
+                    <div
+                      key={img.id}
+                      className="admin-image-preview-item"
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragEnd={handleDragEnd}
+                      style={{
+                        cursor: 'grab',
+                        opacity: draggedIndex === index ? 0.5 : 1,
+                        transition: 'opacity 0.2s'
+                      }}
+                    >
                       {img.isConverting ? (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                           <Loader2 size={28} className="admin-spinner" />
@@ -496,6 +530,26 @@ export default function UploadArtworkClient() {
                       ) : (
                         <Image src={img.preview} alt={`${index + 1}`} fill style={{ objectFit: 'cover' }} />
                       )}
+                      
+                      {/* Drag indicator */}
+                      <div style={{ 
+                        position: 'absolute', 
+                        top: '0.5rem', 
+                        left: '0.5rem', 
+                        background: 'rgba(0,0,0,0.7)', 
+                        color: 'white', 
+                        fontSize: '0.75rem', 
+                        padding: '0.25rem 0.5rem', 
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        pointerEvents: 'none'
+                      }}>
+                        <span style={{ fontSize: '0.875rem' }}>⋮⋮</span>
+                        <span>Drag to reorder</span>
+                      </div>
+
                       <button
                         type="button"
                         onClick={() => removeImage(img.id)}

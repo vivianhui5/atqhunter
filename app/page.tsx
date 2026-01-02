@@ -37,7 +37,7 @@ async function getArtworks(): Promise<{ rootArtworks: ArtworkPost[] }> {
       `)
       .order('display_order', { ascending: true, nullsFirst: false })
       .order('display_order', { ascending: true, nullsFirst: false })
-    .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) {
       // Log error details for debugging
@@ -75,7 +75,7 @@ async function getArtworks(): Promise<{ rootArtworks: ArtworkPost[] }> {
         galleryObj = Array.isArray(a.gallery) ? a.gallery[0] : a.gallery;
         galleryObj = { ...galleryObj, password: null };
       }
-      
+
       const hasOwnPassword = a.password !== null && a.password.length > 0;
       // Use fresh galleries data (with passwords) for inheritance calculation
       const effectivePassword = getEffectivePasswordForPost(
@@ -83,7 +83,7 @@ async function getArtworks(): Promise<{ rootArtworks: ArtworkPost[] }> {
         allGalleriesRaw || []
       );
       const isPasswordProtected = effectivePassword !== null;
-      
+
       return {
         ...a,
         password: null, // Don't send actual password to client
@@ -105,8 +105,8 @@ async function getArtworks(): Promise<{ rootArtworks: ArtworkPost[] }> {
 async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; previewImages?: string[]; subfolderCount?: number; artworkCount?: number })[]> {
   const { data: galleries, error } = await supabaseAdmin
     .from('galleries')
-      .select('id, name, parent_id, password, cover_image_url, display_order, created_at')
-      .is('parent_id', null)
+    .select('id, name, parent_id, password, cover_image_url, display_order, created_at')
+    .is('parent_id', null)
     .order('display_order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false });
 
@@ -131,7 +131,7 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
   const galleriesWithData = await Promise.all(
     (galleries || []).map(async (gallery) => {
       let coverImageUrl = gallery.cover_image_url;
-      
+
       // If no cover image set, get first artwork's first image
       if (!coverImageUrl) {
         const { data: firstArtwork } = await supabaseAdmin
@@ -140,7 +140,7 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
           .eq('gallery_id', gallery.id)
           .limit(1)
           .single();
-        
+
         if (firstArtwork?.images && Array.isArray(firstArtwork.images) && firstArtwork.images.length > 0) {
           const sortedImages = firstArtwork.images.sort((a: { display_order: number }, b: { display_order: number }) => a.display_order - b.display_order);
           coverImageUrl = sortedImages[0]?.image_url || null;
@@ -175,9 +175,9 @@ async function getRootGalleries(): Promise<(Gallery & { coverImageUrl?: string; 
       // Use fresh galleries data (with passwords) for inheritance calculation
       const effectivePassword = getEffectivePassword(gallery, allGalleriesRaw || []);
       const isPasswordProtected = effectivePassword !== null;
-      
+
       // Ensure flags are always boolean (never undefined)
-      return { 
+      return {
         ...gallery,
         display_order: gallery.display_order ?? null,
         password: null, // Don't send password to client
@@ -210,7 +210,7 @@ async function getAllGalleries(): Promise<Gallery[]> {
     const hasOwnPassword = g.password !== null && g.password.length > 0;
     const effectivePassword = getEffectivePassword(g, galleries);
     const isPasswordProtected = effectivePassword !== null;
-    
+
     return {
       ...g,
       display_order: g.display_order ?? null,
@@ -279,14 +279,14 @@ async function getGalleryArtworks(galleryId: string): Promise<ArtworkPost[]> {
       galleryObj = Array.isArray(a.gallery) ? a.gallery[0] : a.gallery;
       galleryObj = { ...galleryObj, password: null };
     }
-    
+
     const hasOwnPassword = a.password !== null && a.password.length > 0;
     const effectivePassword = getEffectivePasswordForPost(
       { gallery_id: a.gallery_id, password: a.password },
       allGalleriesRaw.data || []
     );
     const isPasswordProtected = effectivePassword !== null;
-    
+
     return {
       ...a,
       password: null,
@@ -316,7 +316,7 @@ async function getChildGalleries(parentId: string): Promise<(Gallery & { coverIm
   const galleriesWithData = await Promise.all(
     galleries.map(async (gallery) => {
       let coverImageUrl = gallery.cover_image_url;
-      
+
       if (!coverImageUrl) {
         const { data: firstArtwork } = await supabaseAdmin
           .from('artwork_posts')
@@ -324,7 +324,7 @@ async function getChildGalleries(parentId: string): Promise<(Gallery & { coverIm
           .eq('gallery_id', gallery.id)
           .limit(1)
           .single();
-        
+
         if (firstArtwork?.images && Array.isArray(firstArtwork.images) && firstArtwork.images.length > 0) {
           const sortedImages = firstArtwork.images.sort((a: { display_order: number }, b: { display_order: number }) => a.display_order - b.display_order);
           coverImageUrl = sortedImages[0]?.image_url || null;
@@ -355,8 +355,8 @@ async function getChildGalleries(parentId: string): Promise<(Gallery & { coverIm
       const hasOwnPassword = gallery.password !== null && gallery.password.length > 0;
       const effectivePassword = getEffectivePassword(gallery, allGalleriesRaw.data || []);
       const isPasswordProtected = effectivePassword !== null;
-      
-      return { 
+
+      return {
         ...gallery,
         display_order: gallery.display_order ?? null,
         password: null,
@@ -373,16 +373,36 @@ async function getChildGalleries(parentId: string): Promise<(Gallery & { coverIm
   return galleriesWithData;
 }
 
+
+
+async function getLandingPageText(): Promise<string> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'landing_page_text')
+      .single();
+
+    if (error || !data) {
+      return '';
+    }
+
+    return data.value;
+  } catch {
+    return '';
+  }
+}
+
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ public?: string; gallery?: string }> }) {
   const params = await searchParams;
   // If public=true query param exists, treat as normal user even if admin
   const isPublicView = params?.public === 'true';
   const adminView = isPublicView ? false : await isAdmin();
   const allGalleries = await getAllGalleries();
-  
+
   // Check if we're viewing a specific gallery
   const galleryId = params?.gallery;
-  
+
   if (galleryId) {
     // Fetch gallery and its contents
     const gallery = await getGalleryById(galleryId, allGalleries);
@@ -390,22 +410,22 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       // Gallery not found, show home page
       return redirect('/');
     }
-    
+
     const childGalleries = await getChildGalleries(galleryId);
     const artworks = await getGalleryArtworks(galleryId);
-    
+
     // Get preview images for the gallery
     const { data: previewArtworks } = await supabaseAdmin
       .from('artwork_posts')
       .select('images:artwork_images(image_url)')
       .eq('gallery_id', galleryId)
       .limit(4);
-    
+
     const previewImages = previewArtworks
       ?.flatMap(a => a.images?.map(img => img.image_url) || [])
       .filter(Boolean)
       .slice(0, 4) || [];
-    
+
     return (
       <div className="home-page">
         <Navbar />
@@ -423,13 +443,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       </div>
     );
   }
-  
+
+  // Show home page with all galleries and artworks
   // Show home page with all galleries and artworks
   const { rootArtworks } = await getArtworks();
   const rootGalleries = await getRootGalleries();
+  const landingPageText = await getLandingPageText();
 
   // Create unified items: galleries first (alphabetically), then posts (alphabetically)
-  type UnifiedItem = 
+  type UnifiedItem =
     | { type: 'gallery'; data: Gallery & { coverImageUrl?: string; previewImages?: string[] }; sortKey: string }
     | { type: 'post'; data: ArtworkPost; sortKey: string };
 
@@ -455,13 +477,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // Sort by display_order (null values go to end, then by created_at as fallback)
   items.sort((a, b) => {
-    const aOrder = a.type === 'gallery' 
+    const aOrder = a.type === 'gallery'
       ? (a.data.display_order ?? null)
       : (a.data.display_order ?? null);
     const bOrder = b.type === 'gallery'
       ? (b.data.display_order ?? null)
       : (b.data.display_order ?? null);
-    
+
     // If both have order, sort by order
     if (aOrder !== null && bOrder !== null) {
       return aOrder - bOrder;
@@ -478,23 +500,33 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   return (
     <div className="home-page">
       <Navbar />
-      
+
       <main className="main-content">
         {/* Welcome Section */}
         <section className="welcome-section">
           <h1 className="welcome-title">Welcome</h1>
-          <p className="welcome-description">
-          This gallery showcases some of my Asian artwork collections over 20 years. Please click on each category gallery to see collections. Most artwork are marked with prices, but if you are interested in any collection, please contact me.
-          </p>
-          <p className="welcome-description">
-          这是本人多年下来的部分藏品. 我尽力描述准确. 对于藏品的年代和作者, 我都从各方面考虑, 力求精确. 每一件藏品, 都有我大量的考椐工作. 请点击小面小图以浏览各个藏品. 藏品介绍用中英文标出. 多数藏品有标价, 但如果你对任何一件艺术品感兴趣， 请联系我们          </p>
+
+          {landingPageText ? (
+            <div
+              className="welcome-description rich-text"
+              dangerouslySetInnerHTML={{ __html: landingPageText }}
+            />
+          ) : (
+            <>
+              <p className="welcome-description">
+                This gallery showcases some of my Asian artwork collections over 20 years. Please click on each category gallery to see collections. Most artwork are marked with prices, but if you are interested in any collection, please contact me.
+              </p>
+              <p className="welcome-description">
+                这是本人多年下来的部分藏品. 我尽力描述准确. 对于藏品的年代和作者, 我都从各方面考虑, 力求精确. 每一件藏品, 都有我大量的考椐工作. 请点击小面小图以浏览各个藏品. 藏品介绍用中英文标出. 多数藏品有标价, 但如果你对任何一件艺术品感兴趣， 请联系我们          </p>
+            </>
+          )}
           <ContactUsButton />
         </section>
 
         {/* Full Collection Section */}
-        <section className="collection-section">
-          <HomeClient 
-            items={items} 
+        <section className="section-collection">
+          <HomeClient
+            items={items}
             allGalleries={allGalleries}
             adminView={adminView}
           />

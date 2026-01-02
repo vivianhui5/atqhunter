@@ -124,27 +124,27 @@
   .navbar-content {
     padding: 0.875rem 1rem;
   }
-  
+
   .logo-text {
     font-size: 1.5rem;
   }
-  
+
   .logo-subtext {
     font-size: 1.125rem;
   }
-  
+
   .navbar-nav {
     gap: 1.5rem;
   }
-  
+
   .nav-links-group {
     gap: 1.5rem;
   }
-  
+
   .nav-link {
     font-size: 0.875rem;
   }
-  
+
   .sign-in-button {
     padding: 0.5rem 1rem;
     font-size: 0.8125rem;
@@ -412,24 +412,24 @@
   .galleries-content {
     padding: 2rem 1rem;
   }
-  
+
   .page-title {
     font-size: 2rem;
   }
-  
+
   .page-description {
     font-size: 1rem;
   }
-  
+
   .gallery-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
-  
+
   .gallery-card-content {
     padding: 1rem;
   }
-  
+
   .gallery-card-title {
     font-size: 1rem;
   }
@@ -631,11 +631,11 @@
   .gallery-detail-content {
     padding: 2rem 1rem;
   }
-  
+
   .gallery-detail-title {
     font-size: 2.5rem;
   }
-  
+
   .section-meta {
     margin-bottom: 1.5rem;
   }
@@ -1037,11 +1037,11 @@
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1.5rem;
   }
-  
+
   .artwork-card-info {
     padding: 1rem;
   }
-  
+
   .artwork-card-title {
     font-size: 1rem;
   }
@@ -1216,15 +1216,15 @@
   .login-card {
     padding: 2rem 1.5rem;
   }
-  
+
   .login-title {
     font-size: 1.5rem;
   }
-  
+
   .brand-primary {
     font-size: 1.75rem;
   }
-  
+
   .brand-secondary {
     font-size: 1.25rem;
   }
@@ -1403,8 +1403,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .inquiry-modal {
@@ -1423,6 +1428,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1584,8 +1590,13 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Success State */
@@ -1614,6 +1625,7 @@
     opacity: 0;
     transform: scale(0.5);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -1735,8 +1747,8 @@
 
 /* Collection Search Variant */
 .collection-search {
-  max-width: 800px;
-  width: 100%;
+  width: 100% !important;
+  max-width: none !important;
   margin-bottom: 2rem;
 }
 
@@ -2089,6 +2101,7 @@
     transform: translateY(1rem);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -3680,6 +3693,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -3692,25 +3706,25 @@
     align-items: flex-start;
     padding: 1rem;
   }
-  
+
   .admin-nav-links {
     flex-direction: column;
     width: 100%;
   }
-  
+
   .admin-nav-link {
     width: 100%;
   }
-  
+
   .admin-actions {
     width: 100%;
     justify-content: space-between;
   }
-  
+
   .admin-artwork-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .admin-page-title {
     font-size: 1.5rem;
   }
@@ -3726,18 +3740,18 @@
   --color-background: #FFFFFF;
   --color-background-secondary: #F7F7F7;
   --color-background-tertiary: #F5F5F5;
-  
+
   --color-text-primary: #191919;
   --color-text-secondary: #707070;
   --color-text-tertiary: #999999;
-  
+
   --color-border: #E5E5E5;
   --color-border-hover: #CCCCCC;
   --color-border-active: #191919;
-  
+
   --color-accent: #3665F3;
   --color-accent-hover: #0053A0;
-  
+
   /* Spacing */
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
@@ -3745,7 +3759,7 @@
   --spacing-lg: 1.5rem;
   --spacing-xl: 2rem;
   --spacing-2xl: 3rem;
-  
+
   /* Typography - eBay uses clear, readable fonts */
   --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   --font-size-xs: 0.75rem;
@@ -3756,7 +3770,7 @@
   --font-size-2xl: 1.5rem;
   --font-size-3xl: 2rem;
   --font-size-4xl: 2.5rem;
-  
+
   /* Shadows - Subtle */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.08);
@@ -3774,7 +3788,12 @@ body {
 }
 
 /* ===== TYPOGRAPHY ===== */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-weight: 600;
   line-height: 1.2;
   color: var(--color-text-primary);
@@ -4145,7 +4164,7 @@ img {
 
 .thumbnail.active {
   border-color: #1c1917;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .thumbnail .image {
@@ -4731,7 +4750,7 @@ img {
   width: 100%;
 }
 
-.password-protected-content > * {
+.password-protected-content>* {
   text-align: center;
 }
 

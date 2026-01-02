@@ -11,6 +11,7 @@ import NewGalleryModal from './galleries/NewGalleryModal';
 import DeleteGalleryModal from './galleries/DeleteGalleryModal';
 import PasswordModal from './galleries/PasswordModal';
 import CoverImageSelector from './galleries/CoverImageSelector';
+import LandingPageTextEditor from './LandingPageTextEditor';
 import { ArtworkPost, Gallery } from '@/types/database';
 
 interface Toast {
@@ -22,7 +23,7 @@ interface Toast {
 export default function ManagePostsClient() {
   const searchParams = useSearchParams();
   const galleryId = searchParams.get('gallery');
-  
+
   const [artworks, setArtworks] = useState<ArtworkPost[]>([]);
   const [galleries, setGalleries] = useState<Gallery[]>([]);
   const [currentGallery, setCurrentGallery] = useState<Gallery | null>(null);
@@ -79,7 +80,7 @@ export default function ManagePostsClient() {
       setSearchQuery('');
       prevGalleryIdRef.current = galleryId;
     }
-    
+
     if (galleryId && galleries.length > 0) {
       const gallery = galleries.find((g) => g.id === galleryId);
       setCurrentGallery(gallery || null);
@@ -91,7 +92,7 @@ export default function ManagePostsClient() {
 
   // Get unified items (galleries + posts) sorted by display_order
   const unifiedItems = useMemo(() => {
-    type UnifiedItem = 
+    type UnifiedItem =
       | { type: 'gallery'; data: Gallery & { previewImages?: string[] }; artworkCount: number; subfolderCount?: number; id: string }
       | { type: 'post'; data: ArtworkPost; id: string };
 
@@ -175,13 +176,13 @@ export default function ManagePostsClient() {
 
     // Sort by display_order (null values go to end, then by created_at as fallback)
     items.sort((a, b) => {
-      const aOrder = a.type === 'gallery' 
+      const aOrder = a.type === 'gallery'
         ? (a.data.display_order ?? null)
         : (a.data.display_order ?? null);
       const bOrder = b.type === 'gallery'
         ? (b.data.display_order ?? null)
         : (b.data.display_order ?? null);
-      
+
       // If both have order, sort by order
       if (aOrder !== null && bOrder !== null) {
         return aOrder - bOrder;
@@ -394,13 +395,13 @@ export default function ManagePostsClient() {
         await fetchGalleries();
         await fetchArtworks();
         showToast('Gallery deleted', 'success');
-        
+
         // If we deleted the current gallery, navigate to parent or root
         if (currentGallery && currentGallery.id === galleryToDelete.id) {
-          const parentGallery = currentGallery.parent_id 
+          const parentGallery = currentGallery.parent_id
             ? galleries.find(g => g.id === currentGallery.parent_id)
             : null;
-          
+
           if (parentGallery) {
             const params = new URLSearchParams();
             params.set('gallery', parentGallery.id);
@@ -409,7 +410,7 @@ export default function ManagePostsClient() {
             window.location.href = '/admin';
           }
         }
-        
+
         setDeleteModalOpen(false);
         setGalleryToDelete(null);
       } else {
@@ -484,12 +485,17 @@ export default function ManagePostsClient() {
       </div>
 
       <div className="admin-page-container">
-        <PostsHeader 
+        {/* Landing Page Text Editor - Only show on root level (no gallery selected) */}
+        {!currentGallery && !searchQuery && (
+          <LandingPageTextEditor />
+        )}
+
+        <PostsHeader
           onCreateGallery={() => setShowNewGalleryModal(true)}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />
-        
+
         {/* Breadcrumbs */}
         <Suspense fallback={<div className="admin-breadcrumbs">Loading...</div>}>
           <AdminGalleryBreadcrumbs gallery={currentGallery} allGalleries={galleries} />
@@ -502,7 +508,7 @@ export default function ManagePostsClient() {
           const allImages = galleryArtworks
             .flatMap((a) => a.images?.map((img) => img.image_url) || [])
             .filter(Boolean);
-          
+
           return (
             <EditableGalleryTitle
               name={currentGallery.name}
@@ -533,71 +539,71 @@ export default function ManagePostsClient() {
         ) : (
           <div className="admin-empty-state">
             <p>
-              {searchQuery 
+              {searchQuery
                 ? `No items found matching "${searchQuery}"`
-                : currentGallery 
+                : currentGallery
                   ? 'This gallery is empty. Create posts or sub-galleries.'
                   : 'No galleries or posts yet. Create your first one!'}
             </p>
           </div>
         )}
-        </div>
+      </div>
 
-        {/* New Gallery Modal */}
-        <NewGalleryModal
-          isOpen={showNewGalleryModal}
-          onClose={() => setShowNewGalleryModal(false)}
-          onCreate={handleCreateGallery}
-          parentId={currentGallery?.id || null}
-          galleries={galleries}
+      {/* New Gallery Modal */}
+      <NewGalleryModal
+        isOpen={showNewGalleryModal}
+        onClose={() => setShowNewGalleryModal(false)}
+        onCreate={handleCreateGallery}
+        parentId={currentGallery?.id || null}
+        galleries={galleries}
+      />
+
+      {/* Delete Gallery Modal */}
+      {galleryToDelete && (
+        <DeleteGalleryModal
+          isOpen={deleteModalOpen}
+          onClose={() => {
+            setDeleteModalOpen(false);
+            setGalleryToDelete(null);
+          }}
+          onConfirm={handleDeleteGalleryConfirm}
+          galleryName={galleryToDelete.name}
+          artworkCount={getTotalArtworkCount(galleryToDelete.id)}
+          subGalleryCount={getTotalSubGalleryCount(galleryToDelete.id)}
+          isDeleting={isDeletingGallery}
         />
+      )}
 
-        {/* Delete Gallery Modal */}
-        {galleryToDelete && (
-          <DeleteGalleryModal
-            isOpen={deleteModalOpen}
-            onClose={() => {
-              setDeleteModalOpen(false);
-              setGalleryToDelete(null);
-            }}
-            onConfirm={handleDeleteGalleryConfirm}
-            galleryName={galleryToDelete.name}
-            artworkCount={getTotalArtworkCount(galleryToDelete.id)}
-            subGalleryCount={getTotalSubGalleryCount(galleryToDelete.id)}
-            isDeleting={isDeletingGallery}
-          />
-        )}
+      {/* Password Modal */}
+      {(galleryForPassword || postForPassword) && (
+        <PasswordModal
+          isOpen={passwordModalOpen}
+          onClose={() => {
+            setPasswordModalOpen(false);
+            setGalleryForPassword(null);
+            setPostForPassword(null);
+          }}
+          onSave={handleSavePassword}
+          currentPassword={galleryForPassword?.currentPassword || postForPassword?.currentPassword || null}
+          galleryName={galleryForPassword?.name || postForPassword?.title || ''}
+          isSaving={isSavingPassword}
+        />
+      )}
 
-        {/* Password Modal */}
-        {(galleryForPassword || postForPassword) && (
-          <PasswordModal
-            isOpen={passwordModalOpen}
-            onClose={() => {
-              setPasswordModalOpen(false);
-              setGalleryForPassword(null);
-              setPostForPassword(null);
-            }}
-            onSave={handleSavePassword}
-            currentPassword={galleryForPassword?.currentPassword || postForPassword?.currentPassword || null}
-            galleryName={galleryForPassword?.name || postForPassword?.title || ''}
-            isSaving={isSavingPassword}
-          />
-        )}
-
-        {/* Cover Image Selector Modal */}
-        {galleryForCoverImage && (
-          <CoverImageSelector
-            isOpen={coverImageModalOpen}
-            onClose={() => {
-              setCoverImageModalOpen(false);
-              setGalleryForCoverImage(null);
-            }}
-            galleryId={galleryForCoverImage.id}
-            currentCoverImage={galleryForCoverImage.currentCoverImage}
-            availableImages={galleryForCoverImage.availableImages}
-            onSelect={handleSaveCoverImage}
-          />
-        )}
+      {/* Cover Image Selector Modal */}
+      {galleryForCoverImage && (
+        <CoverImageSelector
+          isOpen={coverImageModalOpen}
+          onClose={() => {
+            setCoverImageModalOpen(false);
+            setGalleryForCoverImage(null);
+          }}
+          galleryId={galleryForCoverImage.id}
+          currentCoverImage={galleryForCoverImage.currentCoverImage}
+          availableImages={galleryForCoverImage.availableImages}
+          onSelect={handleSaveCoverImage}
+        />
+      )}
     </AdminLayout>
   );
 }

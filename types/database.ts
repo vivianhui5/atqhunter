@@ -36,9 +36,16 @@ export interface ArtworkImage {
   created_at: string;
 }
 
+
 export interface AdminUser {
   id: string;
   email: string;
   password_hash: string;
   created_at: string;
+}
+
+export interface SiteSetting {
+  key: string;
+  value: string;
+  updated_at: string;
 }
