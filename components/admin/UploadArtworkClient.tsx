@@ -174,6 +174,7 @@ export default function UploadArtworkClient() {
   };
 
   const clearAllImages = () => {
+    if (!confirm('Are you sure you want to remove all images? This action cannot be undone.')) return;
     imageFiles.forEach((img) => URL.revokeObjectURL(img.preview));
     setImageFiles([]);
   };

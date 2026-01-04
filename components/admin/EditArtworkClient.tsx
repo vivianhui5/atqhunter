@@ -156,9 +156,6 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
 
   // Image management functions
   const deleteExistingImage = async (imageId: string) => {
-    if (!confirm('Delete this image?')) return;
-
-
     try {
       const res = await fetch(`/api/artwork/${artworkId}/images?imageId=${imageId}`, {
         method: 'DELETE',
@@ -273,6 +270,33 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
   const removeNewImage = (index: number) => {
     URL.revokeObjectURL(newImageFiles[index].preview);
     setNewImageFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeAllExistingImages = async () => {
+    if (!confirm('Are you sure you want to remove all images? This action cannot be undone.')) return;
+    
+    try {
+      // Delete all images from database and storage
+      const deletePromises = existingImages.map((img) =>
+        fetch(`/api/artwork/${artworkId}/images?imageId=${img.id}`, {
+          method: 'DELETE',
+        })
+      );
+      
+      await Promise.all(deletePromises);
+      showToast('All images removed', 'success');
+      await fetchArtwork();
+    } catch (err) {
+      console.error('Failed to remove all images:', err);
+      showToast('Failed to remove all images', 'error');
+    }
+  };
+
+  const removeAllNewImages = () => {
+    if (!confirm('Are you sure you want to remove all new images? This action cannot be undone.')) return;
+    
+    newImageFiles.forEach((img) => URL.revokeObjectURL(img.preview));
+    setNewImageFiles([]);
   };
 
 
@@ -549,9 +573,18 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
             {/* Existing Images */}
             {existingImages.length > 0 && (
               <div style={{ marginBottom: '1.5rem' }}>
-                <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#57534e', marginBottom: '0.75rem' }}>
-                  Current Images
-                </h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#57534e', margin: 0 }}>
+                    Current Images
+                  </h4>
+                  <button 
+                    type="button" 
+                    onClick={removeAllExistingImages} 
+                    style={{ fontSize: '0.875rem', color: '#DC2626', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    Remove all
+                  </button>
+                </div>
                 <div className="admin-image-preview-grid">
                   {existingImages.map((img, index) => (
                     <div
@@ -610,9 +643,18 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
             {/* New Images to Upload */}
             {newImageFiles.length > 0 && (
               <div style={{ marginBottom: '1.5rem' }}>
-                <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#57534e', marginBottom: '0.75rem' }}>
-                  New Images (will be uploaded on save)
-                </h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#57534e', margin: 0 }}>
+                    New Images (will be uploaded on save)
+                  </h4>
+                  <button 
+                    type="button" 
+                    onClick={removeAllNewImages} 
+                    style={{ fontSize: '0.875rem', color: '#DC2626', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    Remove all
+                  </button>
+                </div>
                 <div className="admin-image-preview-grid">
                   {newImageFiles.map((img, index) => (
                     <div key={index} className="admin-image-preview-item">

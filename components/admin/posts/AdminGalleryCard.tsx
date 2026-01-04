@@ -64,7 +64,8 @@ export default function AdminGalleryCard({
 
   const handleSave = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (editedName.trim() === gallery.name.trim()) {
+    const trimmedName = editedName.trim();
+    if (trimmedName === gallery.name.trim() || !trimmedName) {
       setIsEditing(false);
       return;
     }
@@ -72,7 +73,7 @@ export default function AdminGalleryCard({
     setIsUpdating(true);
     try {
       if (onUpdateName) {
-        await onUpdateName(gallery.id, editedName.trim());
+        await onUpdateName(gallery.id, trimmedName);
       }
       setIsEditing(false);
     } catch {
@@ -199,7 +200,7 @@ export default function AdminGalleryCard({
               <button
                 onClick={handleSave}
                 className="admin-gallery-card-edit-button save"
-                disabled={isUpdating || !editedName.trim()}
+                disabled={isUpdating || !editedName.trim() || editedName.trim() === gallery.name.trim()}
                 title="Save"
               >
                 <Check size={14} />

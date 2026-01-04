@@ -25,14 +25,15 @@ export default function EditableGalleryTitle({
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleSave = async () => {
-    if (editedName.trim() === name.trim()) {
+    const trimmedName = editedName.trim();
+    if (trimmedName === name.trim() || !trimmedName) {
       setIsEditing(false);
       return;
     }
 
     setIsUpdating(true);
     try {
-      await onUpdate(galleryId, editedName.trim());
+      await onUpdate(galleryId, trimmedName);
       setIsEditing(false);
     } catch {
       // Error handled by parent
@@ -66,7 +67,7 @@ export default function EditableGalleryTitle({
           <button
             onClick={handleSave}
             className="admin-editable-button save"
-            disabled={isUpdating || !editedName.trim()}
+            disabled={isUpdating || !editedName.trim() || editedName.trim() === name.trim()}
             title="Save"
           >
             <Check size={16} />
