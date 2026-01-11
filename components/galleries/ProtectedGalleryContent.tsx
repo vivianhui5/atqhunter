@@ -24,7 +24,7 @@ export default function ProtectedGalleryContent({
   allGalleries,
   childGalleries,
   artworks,
-  previewImages,
+  previewImages: _previewImages,
   adminView = false,
 }: ProtectedGalleryContentProps) {
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -235,12 +235,7 @@ export default function ProtectedGalleryContent({
   return (
     <>
       <GalleryBreadcrumbs gallery={gallery} allGalleries={allGalleries} />
-      <GalleryHeader 
-        name={gallery.name}
-        previewImages={previewImages}
-        subfolderCount={childGalleries.length}
-        artworkCount={artworks.length}
-      />
+      <GalleryHeader name={gallery.name} />
       
       {/* Sub-galleries (folders) */}
       {childGalleries.length > 0 && (
