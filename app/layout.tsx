@@ -10,8 +10,56 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ATQ Hunter — Fine Art Collection",
-  description: "A curated collection of museum-grade artwork",
+  title: {
+    default: "ATQ Hunter — Fine Art Collection | Asian Antiques & Artwork",
+    template: "%s | ATQ Hunter",
+  },
+  description: "Explore ATQ Hunter's curated collection of museum-grade Asian artwork and antiques. Over 20 years of carefully selected pieces including paintings, ceramics, and traditional Asian art.",
+  keywords: ["Asian art", "antiques", "fine art", "Chinese art", "artwork collection", "museum-grade art", "ATQ Hunter", "Asian antiques", "art gallery", "collectible art"],
+  authors: [{ name: "ATQ Hunter" }],
+  creator: "ATQ Hunter",
+  publisher: "ATQ Hunter",
+  metadataBase: new URL("https://atqhunter.com"),
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://atqhunter.com",
+    siteName: "ATQ Hunter",
+    title: "ATQ Hunter — Fine Art Collection | Asian Antiques & Artwork",
+    description: "Explore ATQ Hunter's curated collection of museum-grade Asian artwork and antiques. Over 20 years of carefully selected pieces.",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "ATQ Hunter Fine Art Collection",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ATQ Hunter — Fine Art Collection",
+    description: "Explore ATQ Hunter's curated collection of museum-grade Asian artwork and antiques.",
+    images: ["/og-image.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  verification: {
+    // Add your Google Search Console verification code here
+    // google: "your-verification-code",
+  },
 };
 
 export default function RootLayout({
