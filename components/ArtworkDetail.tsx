@@ -175,26 +175,26 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (images.length > 1) {
-                        setCurrentImageIndex((currentImageIndex - 1 + images.length) % images.length);
+                      if (currentImageIndex > 0) {
+                        setCurrentImageIndex(currentImageIndex - 1);
                       }
                     }}
-                    className={`carousel-arrow carousel-arrow-left ${images.length === 1 ? 'carousel-arrow-disabled' : ''}`}
+                    className={`carousel-arrow carousel-arrow-left ${currentImageIndex === 0 ? 'carousel-arrow-disabled' : ''}`}
                     aria-label="Previous image"
-                    disabled={images.length === 1}
+                    disabled={currentImageIndex === 0}
                   >
                     ‹
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (images.length > 1) {
-                        setCurrentImageIndex((currentImageIndex + 1) % images.length);
+                      if (currentImageIndex < images.length - 1) {
+                        setCurrentImageIndex(currentImageIndex + 1);
                       }
                     }}
-                    className={`carousel-arrow carousel-arrow-right ${images.length === 1 ? 'carousel-arrow-disabled' : ''}`}
+                    className={`carousel-arrow carousel-arrow-right ${currentImageIndex === images.length - 1 ? 'carousel-arrow-disabled' : ''}`}
                     aria-label="Next image"
-                    disabled={images.length === 1}
+                    disabled={currentImageIndex === images.length - 1}
                   >
                     ›
                   </button>
@@ -295,6 +295,26 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
             ×
           </button>
 
+          {/* Thumbnail Indicators */}
+          {images.length > 1 && (
+            <div className="lightbox-thumbnails">
+              {images.map((img, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentImageIndex(i);
+                    setPosition({ x: 0, y: 0 });
+                  }}
+                  className={`lightbox-thumbnail ${i === currentImageIndex ? 'active' : ''}`}
+                  aria-label={`View image ${i + 1}`}
+                >
+                  <Image src={img.image_url} alt="" fill className="lightbox-thumbnail-image" sizes="60px" />
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Zoom Controls */}
           <div className="lightbox-zoom-controls">
             <button 
@@ -333,24 +353,30 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setCurrentImageIndex((currentImageIndex - 1 + images.length) % images.length);
-                  // Reset will happen when new image loads
-                  setPosition({ x: 0, y: 0 });
+                  if (currentImageIndex > 0) {
+                    setCurrentImageIndex(currentImageIndex - 1);
+                    // Reset will happen when new image loads
+                    setPosition({ x: 0, y: 0 });
+                  }
                 }}
-                className="lightbox-arrow lightbox-arrow-left"
+                className={`lightbox-arrow lightbox-arrow-left ${currentImageIndex === 0 ? 'lightbox-arrow-disabled' : ''}`}
                 aria-label="Previous image"
+                disabled={currentImageIndex === 0}
               >
                 ‹
               </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setCurrentImageIndex((currentImageIndex + 1) % images.length);
-                  // Reset will happen when new image loads
-                  setPosition({ x: 0, y: 0 });
+                  if (currentImageIndex < images.length - 1) {
+                    setCurrentImageIndex(currentImageIndex + 1);
+                    // Reset will happen when new image loads
+                    setPosition({ x: 0, y: 0 });
+                  }
                 }}
-                className="lightbox-arrow lightbox-arrow-right"
+                className={`lightbox-arrow lightbox-arrow-right ${currentImageIndex === images.length - 1 ? 'lightbox-arrow-disabled' : ''}`}
                 aria-label="Next image"
+                disabled={currentImageIndex === images.length - 1}
               >
                 ›
               </button>
