@@ -1,7 +1,7 @@
 'use client';
 
 import { ArtworkPost } from '@/types/database';
-import { useState, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ZoomIn, ZoomOut, Maximize2, Mail } from 'lucide-react';
@@ -65,11 +65,13 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
     });
   };
 
-  const handleResetZoom = () => {
+  const handleResetZoom = useCallback(() => {
     // Reset to natural size (100% = 1)
     setZoom(1);
     setPosition({ x: 0, y: 0 });
-  };
+    setIsDragging(false);
+    setDragStart({ x: 0, y: 0 });
+  }, []);
 
   // Mouse wheel zoom
   const handleWheel = (e: React.WheelEvent) => {
@@ -159,8 +161,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                 <div className="image-container-wrapper">
                     <div className="main-image" onClick={() => {
                       setShowLightbox(true);
-                      // Reset will happen when image loads
-                      setPosition({ x: 0, y: 0 });
+                      handleResetZoom();
                     }}>
                     <Image
                       src={images[currentImageIndex].image_url}
@@ -304,7 +305,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                   onClick={(e) => {
                     e.stopPropagation();
                     setCurrentImageIndex(i);
-                    setPosition({ x: 0, y: 0 });
+                    handleResetZoom();
                   }}
                   className={`lightbox-thumbnail ${i === currentImageIndex ? 'active' : ''}`}
                   aria-label={`View image ${i + 1}`}
@@ -355,8 +356,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                   e.stopPropagation();
                   if (currentImageIndex > 0) {
                     setCurrentImageIndex(currentImageIndex - 1);
-                    // Reset will happen when new image loads
-                    setPosition({ x: 0, y: 0 });
+                    handleResetZoom();
                   }
                 }}
                 className={`lightbox-arrow lightbox-arrow-left ${currentImageIndex === 0 ? 'lightbox-arrow-disabled' : ''}`}
@@ -370,8 +370,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                   e.stopPropagation();
                   if (currentImageIndex < images.length - 1) {
                     setCurrentImageIndex(currentImageIndex + 1);
-                    // Reset will happen when new image loads
-                    setPosition({ x: 0, y: 0 });
+                    handleResetZoom();
                   }
                 }}
                 className={`lightbox-arrow lightbox-arrow-right ${currentImageIndex === images.length - 1 ? 'lightbox-arrow-disabled' : ''}`}
