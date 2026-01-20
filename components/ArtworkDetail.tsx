@@ -1,7 +1,7 @@
 'use client';
 
 import { ArtworkPost } from '@/types/database';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ZoomIn, ZoomOut, Maximize2, Mail } from 'lucide-react';
@@ -15,6 +15,8 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const pinchStartDistanceRef = useRef<number | null>(null);
+  const pinchStartZoomRef = useRef<number>(1);
   const lightboxImageRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   
@@ -71,7 +73,49 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
     setPosition({ x: 0, y: 0 });
     setIsDragging(false);
     setDragStart({ x: 0, y: 0 });
+    pinchStartDistanceRef.current = null;
+    pinchStartZoomRef.current = 1;
   }, []);
+
+  // iOS Safari pinch zooms the *page/viewport* by default. You can't reliably "reset" that zoom
+  // in JS, so instead we disable page pinch-zoom while the lightbox is open and implement
+  // pinch-to-zoom on the artwork itself (which we can reset on Next/Prev).
+  useEffect(() => {
+    if (!showLightbox) return;
+
+    const preventGesture = (e: Event) => {
+      e.preventDefault();
+    };
+
+    const preventMultiTouchMove = (e: TouchEvent) => {
+      if (e.touches && e.touches.length > 1) {
+        e.preventDefault();
+      }
+    };
+
+    // These are iOS Safari-specific events.
+    document.addEventListener('gesturestart', preventGesture, { passive: false } as AddEventListenerOptions);
+    document.addEventListener('gesturechange', preventGesture, { passive: false } as AddEventListenerOptions);
+    document.addEventListener('gestureend', preventGesture, { passive: false } as AddEventListenerOptions);
+    document.addEventListener('touchmove', preventMultiTouchMove, { passive: false });
+
+    return () => {
+      document.removeEventListener('gesturestart', preventGesture as EventListener);
+      document.removeEventListener('gesturechange', preventGesture as EventListener);
+      document.removeEventListener('gestureend', preventGesture as EventListener);
+      document.removeEventListener('touchmove', preventMultiTouchMove as EventListener);
+    };
+  }, [showLightbox]);
+
+  const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, max));
+
+  type TouchPoint = Pick<React.Touch, 'clientX' | 'clientY'>;
+
+  const getPinchDistance = (t1: TouchPoint, t2: TouchPoint) => {
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    return Math.hypot(dx, dy);
+  };
 
   // Mouse wheel zoom
   const handleWheel = (e: React.WheelEvent) => {
@@ -120,6 +164,62 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
 
   const handleMouseUp = () => {
     setIsDragging(false);
+  };
+
+  // Touch handlers (mobile)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // Two-finger pinch start
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dist = getPinchDistance(e.touches[0], e.touches[1]);
+      pinchStartDistanceRef.current = dist;
+      pinchStartZoomRef.current = zoom;
+      setIsDragging(false);
+      return;
+    }
+
+    // One-finger pan start (only when zoomed in)
+    if (e.touches.length === 1 && zoom > 1) {
+      e.preventDefault();
+      const t = e.touches[0];
+      setIsDragging(true);
+      setDragStart({ x: t.clientX - position.x, y: t.clientY - position.y });
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    // Pinch to zoom
+    if (e.touches.length === 2 && pinchStartDistanceRef.current !== null) {
+      e.preventDefault();
+      const dist = getPinchDistance(e.touches[0], e.touches[1]);
+      const ratio = dist / pinchStartDistanceRef.current;
+      const nextZoom = clamp(pinchStartZoomRef.current * ratio, 1, 5);
+      setZoom(nextZoom);
+      if (nextZoom <= 1) {
+        setPosition({ x: 0, y: 0 });
+      }
+      return;
+    }
+
+    // One-finger pan (only when zoomed in)
+    if (e.touches.length === 1 && isDragging && zoom > 1) {
+      e.preventDefault();
+      const t = e.touches[0];
+      setPosition({
+        x: t.clientX - dragStart.x,
+        y: t.clientY - dragStart.y,
+      });
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    // If pinch ended
+    if (e.touches.length < 2) {
+      pinchStartDistanceRef.current = null;
+    }
+    if (e.touches.length === 0) {
+      setIsDragging(false);
+    }
   };
 
   // Double-click to reset or zoom in
@@ -392,6 +492,10 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
             onDoubleClick={handleDoubleClick}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
             style={{
               transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
               cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
