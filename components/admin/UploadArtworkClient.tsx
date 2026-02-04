@@ -173,10 +173,14 @@ export default function UploadArtworkClient() {
     setImageFiles((prev) => prev.filter((img) => img.id !== id));
   };
 
-  const clearAllImages = () => {
-    if (!confirm('Are you sure you want to remove all images? This action cannot be undone.')) return;
+  const clearAllImagesState = () => {
     imageFiles.forEach((img) => URL.revokeObjectURL(img.preview));
     setImageFiles([]);
+  };
+
+  const clearAllImages = () => {
+    if (!confirm('Are you sure you want to remove all images? This action cannot be undone.')) return;
+    clearAllImagesState();
   };
 
   const handleDragStart = (index: number) => {
@@ -298,7 +302,7 @@ export default function UploadArtworkClient() {
     setDescription('');
     setPrice('');
     setSelectedGallery('');
-    clearAllImages();
+    clearAllImagesState(); // Clear without confirmation (e.g. after successful upload)
   };
 
   // Check if selected gallery is password protected

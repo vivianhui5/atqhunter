@@ -25,6 +25,34 @@ Required environment variables for the application.
 3. For `NEXTAUTH_SECRET`, run: `openssl rand -base64 32`
 4. Set `NEXTAUTH_URL` to your deployment URL in production
 
+## R2 CORS (required for browser uploads)
+
+If you use **presigned URLs** so the browser uploads directly to R2, the bucket must have a CORS policy. Otherwise you’ll see:
+
+`Access to fetch at '...r2.cloudflarestorage.com/...' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header`
+
+**Fix:** In Cloudflare Dashboard → **R2** → your bucket (e.g. `atqhunter-images`) → **Settings** → **CORS Policy** → **Add CORS policy** → **JSON** tab, paste:
+
+```json
+[
+  {
+    "AllowedOrigins": [
+      "https://www.atqhunter.com",
+      "https://atqhunter.com",
+      "http://localhost:3000"
+    ],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["Content-Type"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+- Adjust `AllowedOrigins` to your real site origin(s) and keep `http://localhost:3000` for local dev.
+- If uploads still fail, add any extra headers your client sends to `AllowedHeaders` (e.g. `x-amz-*` if used).
+- Save; CORS can take up to ~30 seconds to apply.
+
 ## Security Notes
 
 - Never commit `.env.local` to version control
