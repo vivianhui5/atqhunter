@@ -4,8 +4,9 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import { TextStyle, FontSize } from '@tiptap/extension-text-style';
-import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Type } from 'lucide-react';
-import { useState } from 'react';
+import Color from '@tiptap/extension-color';
+import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Type, Palette } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 
 interface RichTextEditorProps {
   content: string;
@@ -19,15 +20,33 @@ const fontSizes = [
   { label: 'Extra Large', value: '24px' },
 ];
 
+const presetColors = [
+  { label: 'Default', value: null },
+  { label: 'Black', value: '#1c1917' },
+  { label: 'Gray', value: '#57534e' },
+  { label: 'Red', value: '#dc2626' },
+  { label: 'Orange', value: '#ea580c' },
+  { label: 'Amber', value: '#d97706' },
+  { label: 'Green', value: '#16a34a' },
+  { label: 'Teal', value: '#0d9488' },
+  { label: 'Blue', value: '#2563eb' },
+  { label: 'Indigo', value: '#4f46e5' },
+  { label: 'Purple', value: '#7c3aed' },
+  { label: 'Pink', value: '#db2777' },
+  { label: 'Rose', value: '#e11d48' },
+];
+
 export default function RichTextEditor({ content, onChange }: RichTextEditorProps) {
   const [showFontMenu, setShowFontMenu] = useState(false);
+  const [showColorMenu, setShowColorMenu] = useState(false);
+  const colorMenuRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
-    extensions: [StarterKit, Underline, TextStyle, FontSize],
+    extensions: [StarterKit, Underline, TextStyle, FontSize, Color],
     content,
     immediatelyRender: false,
-    onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+    onUpdate: ({ editor: ed }) => {
+      onChange(ed.getHTML());
     },
     editorProps: {
       attributes: {
@@ -36,11 +55,21 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
     },
   });
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (colorMenuRef.current && !colorMenuRef.current.contains(e.target as Node)) {
+        setShowColorMenu(false);
+      }
+    };
+    if (showColorMenu) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showColorMenu]);
+
   if (!editor) {
     return (
       <div className="rich-text-editor-wrapper">
-        <div className="rich-text-toolbar" style={{ height: '3rem' }} />
-        <div style={{ minHeight: '140px', padding: '1.25rem', background: '#fafaf9' }} />
+        <div className="rich-text-toolbar rich-text-toolbar-placeholder" />
+        <div className="rich-text-editor-placeholder" />
       </div>
     );
   }
@@ -55,6 +84,18 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
     setShowFontMenu(false);
   };
 
+  const applyColor = (color: string | null) => {
+    if (!editor) return;
+    if (color === null) {
+      editor.chain().focus().unsetColor().run();
+    } else {
+      editor.chain().focus().setColor(color).run();
+    }
+    setShowColorMenu(false);
+  };
+
+  const currentColor = editor.getAttributes('textStyle').color ?? null;
+
   return (
     <div className="rich-text-editor-wrapper">
       <div className="rich-text-toolbar">
@@ -62,7 +103,7 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
         <div className="relative">
           <button
             type="button"
-            onClick={() => setShowFontMenu(!showFontMenu)}
+            onClick={() => { setShowFontMenu(!showFontMenu); setShowColorMenu(false); }}
             title="Font Size"
             className={`rich-text-button ${showFontMenu ? 'active' : ''}`}
           >
@@ -82,6 +123,54 @@ export default function RichTextEditor({ content, onChange }: RichTextEditorProp
                   {size.label}
                 </button>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Text Color */}
+        <div className="relative" ref={colorMenuRef}>
+          <button
+            type="button"
+            onClick={() => { setShowColorMenu(!showColorMenu); setShowFontMenu(false); }}
+            title="Text Color"
+            className={`rich-text-button ${showColorMenu || currentColor ? 'active' : ''}`}
+          >
+            <Palette size={16} />
+            <span>Color</span>
+            {currentColor && (
+              <span
+                className="rich-text-color-dot"
+                style={{ backgroundColor: currentColor }}
+                aria-hidden
+              />
+            )}
+          </button>
+          {showColorMenu && (
+            <div className="rich-text-dropdown rich-text-color-dropdown">
+              <div className="rich-text-color-grid">
+                {presetColors.map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => applyColor(preset.value)}
+                    className="rich-text-color-swatch"
+                    title={preset.label}
+                    style={preset.value ? { backgroundColor: preset.value } : undefined}
+                    data-default={preset.value === null ? 'true' : undefined}
+                  >
+                    {preset.value === null ? 'A' : ''}
+                  </button>
+                ))}
+              </div>
+              <label className="rich-text-color-custom">
+                <span>Custom</span>
+                <input
+                  type="color"
+                  className="rich-text-color-input"
+                  value={currentColor && /^#[0-9A-Fa-f]{6}$/.test(currentColor) ? currentColor : '#44403c'}
+                  onChange={(e) => applyColor(e.target.value)}
+                />
+              </label>
             </div>
           )}
         </div>
