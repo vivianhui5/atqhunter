@@ -1872,6 +1872,8 @@
   height: 100%;
   min-height: 400px;
   max-height: 400px;
+  min-width: 0;
+  width: 100%;
 }
 
 .admin-artwork-card.clickable {
@@ -2499,30 +2501,35 @@
   margin-bottom: 2rem;
 }
 
-/* Unified Grid - Desktop File Browser Style */
+/* Unified Grid - Desktop File Browser Style
+   minmax(0, 1fr) keeps all columns equal width; 1fr alone lets content grow the first column. */
 .admin-unified-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1.5rem;
   align-items: stretch;
   margin-bottom: 2rem;
 }
 
+.admin-unified-grid > * {
+  min-width: 0;
+}
+
 @media (max-width: 1400px) {
   .admin-unified-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 1024px) {
   .admin-unified-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 768px) {
   .admin-unified-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
   }
 }
@@ -2547,6 +2554,8 @@
   height: 400px;
   min-height: 400px;
   max-height: 400px;
+  min-width: 0;
+  width: 100%;
 }
 
 .admin-gallery-card-filebrowser:hover {
