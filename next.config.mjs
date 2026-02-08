@@ -7,10 +7,9 @@ const nextConfig = {
         hostname: '**',
       },
     ],
-    // Disable automatic format conversion to preserve original image quality
-    // formats: ['image/avif', 'image/webp'],
-    // Use unoptimized images to prevent compression
-    unoptimized: false, // Keep optimization for performance, but we'll use unoptimized prop on specific images
+    // Avoid Vercel Image Optimization quota (402 when limit exceeded on free tier).
+    // Images are served as-is from origin (e.g. S3); no server-side resize/WebP.
+    unoptimized: true,
   },
   async headers() {
     return [
