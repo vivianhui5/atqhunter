@@ -84,9 +84,16 @@ async function getArtworks(): Promise<{ rootArtworks: ArtworkPost[] }> {
       );
       const isPasswordProtected = effectivePassword !== null;
 
+      // Only keep the first image (cover) for listing — the detail page loads all images
+      const sortedImages = (a.images || []).sort(
+        (x: { display_order: number }, y: { display_order: number }) => x.display_order - y.display_order
+      );
+      const coverOnly = sortedImages.length > 0 ? [sortedImages[0]] : [];
+
       return {
         ...a,
-        password: null, // Don't send actual password to client
+        images: coverOnly,
+        password: null,
         password_protected: isPasswordProtected,
         hasOwnPassword,
         gallery: galleryObj,
@@ -287,8 +294,15 @@ async function getGalleryArtworks(galleryId: string): Promise<ArtworkPost[]> {
     );
     const isPasswordProtected = effectivePassword !== null;
 
+    // Only keep the first image (cover) for listing — the detail page loads all images
+    const sortedImages = (a.images || []).sort(
+      (x: { display_order: number }, y: { display_order: number }) => x.display_order - y.display_order
+    );
+    const coverOnly = sortedImages.length > 0 ? [sortedImages[0]] : [];
+
     return {
       ...a,
+      images: coverOnly,
       password: null,
       password_protected: isPasswordProtected,
       hasOwnPassword,
