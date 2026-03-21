@@ -9,9 +9,9 @@ import AdminGalleryBreadcrumbs from './posts/AdminGalleryBreadcrumbs';
 import EditableGalleryTitle from './posts/EditableGalleryTitle';
 import NewGalleryModal from './galleries/NewGalleryModal';
 import DeleteGalleryModal from './galleries/DeleteGalleryModal';
-import PasswordModal from './galleries/PasswordModal';
 import CoverImageSelector from './galleries/CoverImageSelector';
 import LandingPageTextEditor from './LandingPageTextEditor';
+import InlinePasswordEditor from './galleries/InlinePasswordEditor';
 import { ArtworkPost, Gallery } from '@/types/database';
 
 interface Toast {
@@ -574,19 +574,20 @@ export default function ManagePostsClient() {
         />
       )}
 
-      {/* Password Modal */}
-      {(galleryForPassword || postForPassword) && (
-        <PasswordModal
-          isOpen={passwordModalOpen}
-          onClose={() => {
+      {/* Inline Password Editor (no modal overlay) */}
+      {(galleryForPassword || postForPassword) && passwordModalOpen && (
+        <InlinePasswordEditor
+          title={galleryForPassword?.name || postForPassword?.title || ''}
+          currentPassword={galleryForPassword?.currentPassword || postForPassword?.currentPassword || null}
+          isSaving={isSavingPassword}
+          onCancel={() => {
             setPasswordModalOpen(false);
             setGalleryForPassword(null);
             setPostForPassword(null);
           }}
-          onSave={handleSavePassword}
-          currentPassword={galleryForPassword?.currentPassword || postForPassword?.currentPassword || null}
-          galleryName={galleryForPassword?.name || postForPassword?.title || ''}
-          isSaving={isSavingPassword}
+          onSave={async (password) => {
+            await handleSavePassword(password);
+          }}
         />
       )}
 

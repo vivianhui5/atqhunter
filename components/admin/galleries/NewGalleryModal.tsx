@@ -23,14 +23,16 @@ export default function NewGalleryModal({
 }: NewGalleryModalProps) {
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState<string | null>(initialParentId || null);
-  const [password, setPassword] = useState('');
+  const [passwordDraft, setPasswordDraft] = useState('');
+  const [passwordApplied, setPasswordApplied] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setName('');
       setParentId(initialParentId || null);
-      setPassword('');
+      setPasswordDraft('');
+      setPasswordApplied(null);
     }
   }, [isOpen, initialParentId]);
 
@@ -44,11 +46,12 @@ export default function NewGalleryModal({
     if (!name.trim()) return;
 
     setIsCreating(true);
-    await onCreate(name.trim(), parentId, password.trim() || null);
+    await onCreate(name.trim(), parentId, passwordApplied);
     setIsCreating(false);
     setName('');
     setParentId(null);
-    setPassword('');
+    setPasswordDraft('');
+    setPasswordApplied(null);
   };
 
   return (
@@ -102,13 +105,52 @@ export default function NewGalleryModal({
             <input
               id="gallery-password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              value={passwordDraft}
+              onChange={(e) => setPasswordDraft(e.target.value)}
               className="admin-form-input"
-              placeholder="Leave empty for no password protection"
+              placeholder="Type a password, then click Set password"
             />
             <p className="admin-form-help-text">
               Set a password to protect this gallery and all its contents
+            </p>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const t = passwordDraft.trim();
+                  if (t.length < 3) return;
+                  setPasswordApplied(t);
+                  setPasswordDraft('');
+                }}
+                className="admin-primary-button"
+                disabled={isCreating || passwordDraft.trim().length < 3}
+                style={{ padding: '0.45rem 0.85rem', fontSize: '0.8125rem' }}
+              >
+                Set password
+              </button>
+
+              {passwordApplied && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPasswordApplied(null);
+                    setPasswordDraft('');
+                  }}
+                  className="admin-secondary-button"
+                  disabled={isCreating}
+                  style={{ padding: '0.45rem 0.85rem', fontSize: '0.8125rem' }}
+                >
+                  Clear password
+                </button>
+              )}
+            </div>
+
+            <p className="admin-form-help-text" style={{ marginTop: '0.5rem' }}>
+              {passwordApplied
+                ? 'Password will be applied when you create the gallery.'
+                : 'If you type here but don’t click Set password, nothing will be applied.'}
             </p>
           </div>
 

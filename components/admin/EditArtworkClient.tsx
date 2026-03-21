@@ -37,8 +37,12 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [selectedGallery, setSelectedGallery] = useState('');
-  const [password, setPassword] = useState('');
+  const [passwordDraft, setPasswordDraft] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  /** keep = omit password in PATCH; set = new value; remove = explicit null */
+  const [passwordIntent, setPasswordIntent] = useState<'keep' | 'set' | 'remove'>('keep');
+  const [passwordNewValue, setPasswordNewValue] = useState<string | null>(null);
+  const [hasServerPassword, setHasServerPassword] = useState(false);
   const [galleries, setGalleries] = useState<Gallery[]>([]);
   const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -102,7 +106,10 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
       setDescription(data.artwork.description || '');
       setPrice(data.artwork.price?.toString() || '');
       setSelectedGallery(data.artwork.gallery_id || '');
-      setPassword(data.artwork.password || '');
+      setHasServerPassword(!!(data.artwork.password && String(data.artwork.password).trim()));
+      setPasswordDraft('');
+      setPasswordIntent('keep');
+      setPasswordNewValue(null);
       
       // Load existing images
       if (data.artwork.images) {
@@ -384,17 +391,22 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
         }
       }
 
-      // Update artwork metadata
+      const payload: Record<string, unknown> = {
+        title: title.trim(),
+        description,
+        price: price ? parseFloat(price) : null,
+        gallery_id: selectedGallery || null,
+      };
+      if (passwordIntent === 'set' && passwordNewValue) {
+        payload.password = passwordNewValue;
+      } else if (passwordIntent === 'remove') {
+        payload.password = null;
+      }
+
       const res = await fetch(`/api/artwork/${artworkId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          description,
-          price: price ? parseFloat(price) : null,
-          gallery_id: selectedGallery || null,
-          password: password.trim() || null,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -712,17 +724,30 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
             <RichTextEditor content={description} onChange={setDescription} />
           </div>
 
-          {/* Password Protection */}
+          {/* Password Protection — draft is not saved until you click “Set password” */}
           <div className="admin-form-section">
             <label htmlFor="password" className="admin-form-label">Password (optional)</label>
+            <p className="admin-form-help-text" style={{ marginBottom: '0.5rem' }}>
+              {passwordIntent === 'remove'
+                ? 'Password will be removed when you update this post.'
+                : passwordIntent === 'set' && passwordNewValue
+                  ? 'A new password will be saved when you update this post.'
+                  : hasServerPassword
+                    ? 'This post has a password. Type a new one and click Set password to change it, or remove it below.'
+                    : selectedGallery && isGalleryProtected
+                      ? 'This post inherits the gallery password unless you set its own here.'
+                      : 'Optional password for this post only.'}
+            </p>
             <div style={{ position: 'relative' }}>
               <input
                 id="password"
+                name={`artwork-password-draft-${artworkId}`}
+                autoComplete="new-password"
                 type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={passwordDraft}
+                onChange={(e) => setPasswordDraft(e.target.value)}
                 className="admin-form-input"
-                placeholder="Leave empty to inherit from gallery or no protection"
+                placeholder="Type a password, then click Set password"
                 style={{ paddingRight: '2.5rem' }}
               />
               <button
@@ -746,11 +771,56 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            <p className="admin-form-help-text">
-              {selectedGallery && isGalleryProtected 
-                ? 'This post will inherit the gallery password. Set a password here to override it for this post only.'
-                : 'Set a password to protect this post independently. If in a gallery, this overrides the gallery password.'}
-            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <button
+                type="button"
+                className="admin-primary-button"
+                style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                onClick={() => {
+                  const t = passwordDraft.trim();
+                  if (t.length < 3) {
+                    showToast('Password must be at least 3 characters', 'error');
+                    return;
+                  }
+                  setPasswordNewValue(t);
+                  setPasswordIntent('set');
+                  setPasswordDraft('');
+                  showToast('Password will be saved when you update the post', 'success');
+                }}
+              >
+                Set password
+              </button>
+              {(hasServerPassword || passwordIntent === 'set') && passwordIntent !== 'remove' && (
+                <button
+                  type="button"
+                  className="admin-secondary-button"
+                  style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                  onClick={() => {
+                    setPasswordIntent('remove');
+                    setPasswordNewValue(null);
+                    setPasswordDraft('');
+                    showToast('Password will be removed when you update the post', 'info');
+                  }}
+                >
+                  Remove password
+                </button>
+              )}
+              {passwordIntent !== 'keep' && (
+                <button
+                  type="button"
+                  className="admin-secondary-button"
+                  style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                  onClick={() => {
+                    setPasswordIntent('keep');
+                    setPasswordNewValue(null);
+                    setPasswordDraft('');
+                    showToast('Password change cancelled', 'info');
+                  }}
+                >
+                  Undo password change
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Submit */}

@@ -28,7 +28,8 @@ export default function UploadArtworkClient() {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [selectedGallery, setSelectedGallery] = useState('');
-  const [password, setPassword] = useState('');
+  const [passwordDraft, setPasswordDraft] = useState('');
+  const [postPasswordApplied, setPostPasswordApplied] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [galleries, setGalleries] = useState<Gallery[]>([]);
   const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
@@ -37,7 +38,8 @@ export default function UploadArtworkClient() {
   const [showNewGallery, setShowNewGallery] = useState(false);
   const [newGalleryName, setNewGalleryName] = useState('');
   const [selectedParentGallery, setSelectedParentGallery] = useState('');
-  const [newGalleryPassword, setNewGalleryPassword] = useState('');
+  const [newGalleryPwDraft, setNewGalleryPwDraft] = useState('');
+  const [newGalleryPwApplied, setNewGalleryPwApplied] = useState<string | null>(null);
   const [showNewGalleryPassword, setShowNewGalleryPassword] = useState(false);
   const [creatingGallery, setCreatingGallery] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -100,7 +102,7 @@ export default function UploadArtworkClient() {
         body: JSON.stringify({ 
           name: trimmedName,
           parent_id: selectedParentGallery || null,
-          password: newGalleryPassword.trim() || null
+          password: newGalleryPwApplied
         }),
       });
 
@@ -111,7 +113,9 @@ export default function UploadArtworkClient() {
         setShowNewGallery(false);
         setNewGalleryName('');
         setSelectedParentGallery('');
-        setNewGalleryPassword('');
+        setNewGalleryPwDraft('');
+        setNewGalleryPwApplied(null);
+        setShowNewGalleryPassword(false);
         showToast('Gallery created!', 'success');
       }
     } catch {
@@ -274,7 +278,7 @@ export default function UploadArtworkClient() {
           description,
           price: price || null,
           gallery_id: selectedGallery || null,
-          password: password.trim() || null,
+          password: postPasswordApplied,
           imageUrls,
         }),
       });
@@ -302,6 +306,8 @@ export default function UploadArtworkClient() {
     setDescription('');
     setPrice('');
     setSelectedGallery('');
+    setPasswordDraft('');
+    setPostPasswordApplied(null);
     clearAllImagesState(); // Clear without confirmation (e.g. after successful upload)
   };
 
@@ -384,11 +390,12 @@ export default function UploadArtworkClient() {
                     <div style={{ position: 'relative' }}>
                       <input
                         type={showNewGalleryPassword ? 'text' : 'password'}
-                        value={newGalleryPassword}
-                        onChange={(e) => setNewGalleryPassword(e.target.value)}
-                        placeholder="Password (optional)"
+                        value={newGalleryPwDraft}
+                        onChange={(e) => setNewGalleryPwDraft(e.target.value)}
+                        placeholder="Type a password, then click Set password"
                         className="admin-form-input"
                         style={{ paddingRight: '2.5rem' }}
+                        autoComplete="new-password"
                       />
                       <button
                         type="button"
@@ -411,8 +418,46 @@ export default function UploadArtworkClient() {
                         {showNewGalleryPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
+                      <button
+                        type="button"
+                        className="admin-primary-button"
+                        style={{ padding: '0.45rem 0.85rem', fontSize: '0.8125rem' }}
+                        onClick={() => {
+                          const t = newGalleryPwDraft.trim();
+                          if (t.length < 3) {
+                            showToast('Gallery password must be at least 3 characters', 'error');
+                            return;
+                          }
+                          setNewGalleryPwApplied(t);
+                          setNewGalleryPwDraft('');
+                          showToast('Gallery password will be saved when you create', 'success');
+                        }}
+                      >
+                        Set password
+                      </button>
+
+                      {newGalleryPwApplied && (
+                        <button
+                          type="button"
+                          className="admin-secondary-button"
+                          style={{ padding: '0.45rem 0.85rem', fontSize: '0.8125rem' }}
+                          onClick={() => {
+                            setNewGalleryPwApplied(null);
+                            setNewGalleryPwDraft('');
+                            showToast('Gallery password cleared', 'info');
+                          }}
+                        >
+                          Clear password
+                        </button>
+                      )}
+                    </div>
+
                     <p style={{ fontSize: '0.75rem', color: '#78716c', marginTop: '0.5rem', margin: 0 }}>
-                      Set a password to protect this gallery and all its contents
+                      {newGalleryPwApplied
+                        ? 'This gallery will be created with a password.'
+                        : 'Leave empty (or don’t click Set) for no password protection.'}
                     </p>
                   </div>
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
@@ -430,7 +475,9 @@ export default function UploadArtworkClient() {
                         setShowNewGallery(false);
                         setNewGalleryName('');
                         setSelectedParentGallery('');
-                        setNewGalleryPassword('');
+                        setNewGalleryPwDraft('');
+                        setNewGalleryPwApplied(null);
+                        setShowNewGalleryPassword(false);
                       }}
                         className="admin-secondary-button"
                     >
@@ -588,14 +635,23 @@ export default function UploadArtworkClient() {
           {/* Password Protection */}
           <div className="admin-form-section">
             <label htmlFor="password" className="admin-form-label">Password (optional)</label>
+            <p className="admin-form-help-text" style={{ marginBottom: '0.5rem' }}>
+              {postPasswordApplied
+                ? 'A password will be saved with this post. Click Clear to remove it.'
+                : selectedGallery && isGalleryProtected
+                  ? 'This post inherits the gallery password unless you set its own.'
+                  : 'Optional: type a password, then click Set password.'}
+            </p>
+
             <div style={{ position: 'relative' }}>
               <input
                 id="password"
+                autoComplete="new-password"
                 type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={passwordDraft}
+                onChange={(e) => setPasswordDraft(e.target.value)}
                 className="admin-form-input"
-                placeholder="Leave empty to inherit from gallery or no protection"
+                placeholder="Type a password, then click Set password"
                 style={{ paddingRight: '2.5rem' }}
               />
               <button
@@ -619,11 +675,40 @@ export default function UploadArtworkClient() {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            <p className="admin-form-help-text">
-              {selectedGallery && isGalleryProtected 
-                ? 'This post will inherit the gallery password. Set a password here to override it for this post only.'
-                : 'Set a password to protect this post independently. If in a gallery, this overrides the gallery password.'}
-            </p>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <button
+                type="button"
+                className="admin-primary-button"
+                style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                onClick={() => {
+                  const t = passwordDraft.trim();
+                  if (t.length < 3) {
+                    showToast('Password must be at least 3 characters', 'error');
+                    return;
+                  }
+                  setPostPasswordApplied(t);
+                  setPasswordDraft('');
+                  showToast('Password will be saved with this post when you submit', 'success');
+                }}
+              >
+                Set password
+              </button>
+              {postPasswordApplied && (
+                <button
+                  type="button"
+                  className="admin-secondary-button"
+                  style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                  onClick={() => {
+                    setPostPasswordApplied(null);
+                    setPasswordDraft('');
+                    showToast('Post password cleared', 'info');
+                  }}
+                >
+                  Clear password
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Submit */}
