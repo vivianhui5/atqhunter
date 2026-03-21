@@ -4545,13 +4545,13 @@ img {
   transform: translateY(-50%);
 }
 
-/* Lightbox Image Container */
+/* Lightbox Image Container — wraps img at intrinsic pixels; scale(zoom) fits screen → native */
 .lightbox-image-container {
   position: relative;
-  max-width: 90vw;
-  max-height: 90vh;
-  width: auto;
-  height: 90vh;
+  width: max-content;
+  height: max-content;
+  max-width: none;
+  max-height: none;
   transition: transform 0.1s ease-out;
   transform-origin: center center;
   touch-action: none;
@@ -4569,10 +4569,13 @@ img {
 }
 
 .lightbox-image {
+  display: block;
+  position: relative;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
   object-fit: contain;
-  position: relative !important;
-  width: 100% !important;
-  height: 100% !important;
   pointer-events: none;
 }
 
