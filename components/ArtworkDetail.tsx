@@ -4,14 +4,26 @@ import { ArtworkPost } from '@/types/database';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ZoomIn, ZoomOut, Maximize2, Mail } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import InquiryModal from './InquiryModal';
+
+/** Usable size for “fit to screen” — visualViewport on mobile (iOS URL bar / pinch) avoids off-center scaling. */
+function getLightboxViewportPad(): { padW: number; padH: number } {
+  if (typeof window === 'undefined') {
+    return { padW: 0, padH: 0 };
+  }
+  const vv = window.visualViewport;
+  if (vv && vv.width > 0 && vv.height > 0) {
+    return { padW: vv.width * 0.9, padH: vv.height * 0.9 };
+  }
+  return { padW: window.innerWidth * 0.9, padH: window.innerHeight * 0.9 };
+}
 
 export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showLightbox, setShowLightbox] = useState(false);
   const [showInquiry, setShowInquiry] = useState(false);
-  /** Scale factor: image is drawn at natural pixels, then this scales it. Range [fitScale, 1] — fit-to-viewport … native resolution (no upscaling). */
+  /** Scale factor: only `fitScale` (fit screen) or `1` (full resolution); pan allowed at full when image exceeds viewport. */
   const [zoom, setZoom] = useState(1);
   const [fitScale, setFitScale] = useState(1);
   /** Last decoded dimensions; only applies when index matches current slide (avoids stale size when switching images). */
@@ -26,6 +38,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
   const pinchStartDistanceRef = useRef<number | null>(null);
   const pinchStartZoomRef = useRef<number>(1);
   const fitScaleRef = useRef(1);
+  const lastTapRef = useRef<{ t: number; x: number; y: number } | null>(null);
   const lightboxImageRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   
@@ -35,8 +48,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
 
   const computeFitScale = useCallback((naturalWidth: number, naturalHeight: number) => {
     if (naturalWidth <= 0 || naturalHeight <= 0) return 1;
-    const padW = window.innerWidth * 0.9;
-    const padH = window.innerHeight * 0.9;
+    const { padW, padH } = getLightboxViewportPad();
     return Math.min(padW / naturalWidth, padH / naturalHeight, 1);
   }, []);
 
@@ -69,38 +81,42 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
       const fs = computeFitScale(img.naturalWidth, img.naturalHeight);
       fitScaleRef.current = fs;
       setFitScale(fs);
-      setZoom((z) => clamp(z, fs, 1));
+      setZoom((z) => (z >= 1 - 1e-3 ? 1 : fs));
     };
     window.addEventListener('resize', recalc);
-    return () => window.removeEventListener('resize', recalc);
+    const vv = window.visualViewport;
+    vv?.addEventListener('resize', recalc);
+    vv?.addEventListener('scroll', recalc);
+    return () => {
+      window.removeEventListener('resize', recalc);
+      vv?.removeEventListener('resize', recalc);
+      vv?.removeEventListener('scroll', recalc);
+    };
   }, [showLightbox, naturalSize, computeFitScale]);
 
-  const ZOOM_STEP = 0.08;
-
-  const handleZoomIn = () => {
-    setZoom((prev) => Math.min(prev + ZOOM_STEP, 1));
-  };
-
-  const handleZoomOut = () => {
-    setZoom((prev) => {
-      const fs = fitScaleRef.current;
-      const next = Math.max(prev - ZOOM_STEP, fs);
-      if (next <= fs + 1e-6) {
-        setPosition({ x: 0, y: 0 });
-      }
-      return next;
-    });
-  };
-
-  const handleResetZoom = useCallback(() => {
+  const setViewFit = useCallback(() => {
     const fs = fitScaleRef.current;
     setZoom(fs);
     setPosition({ x: 0, y: 0 });
     setIsDragging(false);
-    setDragStart({ x: 0, y: 0 });
     pinchStartDistanceRef.current = null;
     pinchStartZoomRef.current = fs;
   }, []);
+
+  const setViewFull = useCallback(() => {
+    setZoom(1);
+    setPosition({ x: 0, y: 0 });
+    setIsDragging(false);
+    pinchStartDistanceRef.current = null;
+    pinchStartZoomRef.current = 1;
+  }, []);
+
+  const handleResetZoom = useCallback(() => {
+    setViewFit();
+    setDragStart({ x: 0, y: 0 });
+    pinchStartZoomRef.current = fitScaleRef.current;
+    lastTapRef.current = null;
+  }, [setViewFit]);
 
   // iOS Safari pinch zooms the *page/viewport* by default. You can't reliably "reset" that zoom
   // in JS, so instead we disable page pinch-zoom while the lightbox is open and implement
@@ -140,22 +156,26 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
     return Math.hypot(dx, dy);
   };
 
-  // Mouse wheel zoom
+  // Wheel: only two modes — scroll out → fit, scroll in → full
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     if (!naturalSize) return;
-    const delta = e.deltaY > 0 ? -0.05 : 0.05;
-    setZoom((prev) => {
-      const fs = fitScaleRef.current;
-      const newZoom = clamp(prev + delta, fs, 1);
-      if (newZoom <= fs + 1e-6) {
-        setPosition({ x: 0, y: 0 });
-      }
-      return newZoom;
-    });
+    const fs = fitScaleRef.current;
+    if (Math.abs(1 - fs) < 1e-6) return;
+    if (e.deltaY > 0) {
+      setViewFit();
+    } else {
+      setViewFull();
+    }
   };
 
   const canPan = naturalSize !== null && zoom > fitScale + 1e-6;
+  const fullSizeAvailable =
+    naturalSize !== null && Math.abs(1 - fitScale) >= 1e-6;
+  const atFit =
+    naturalSize !== null &&
+    Math.abs(zoom - fitScale) <= Math.max(0.002, fitScale * 0.04);
+  const atFull = naturalSize !== null && zoom >= 1 - 1e-3;
 
   // Pan/drag handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -201,7 +221,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    // Pinch to zoom
+    // Pinch: interpolate between fit and full while moving; snap on release
     if (e.touches.length === 2 && pinchStartDistanceRef.current !== null && naturalSize) {
       e.preventDefault();
       const dist = getPinchDistance(e.touches[0], e.touches[1]);
@@ -227,25 +247,66 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    // If pinch ended
+    const pinchWasActive = pinchStartDistanceRef.current !== null;
     if (e.touches.length < 2) {
       pinchStartDistanceRef.current = null;
+    }
+    if (pinchWasActive && e.touches.length < 2 && naturalSize) {
+      const fs = fitScaleRef.current;
+      lastTapRef.current = null;
+      if (Math.abs(1 - fs) >= 1e-6) {
+        setZoom((z) => {
+          const snapped = z >= (fs + 1) / 2 ? 1 : fs;
+          if (snapped <= fs + 1e-6) {
+            setPosition({ x: 0, y: 0 });
+          }
+          return snapped;
+        });
+      }
     }
     if (e.touches.length === 0) {
       setIsDragging(false);
     }
+    // Double-tap toggle (mobile; onDoubleClick is unreliable on touch)
+    if (
+      e.touches.length === 0 &&
+      e.changedTouches.length === 1 &&
+      !pinchWasActive &&
+      naturalSize &&
+      Math.abs(1 - fitScale) >= 1e-6
+    ) {
+      const t = e.changedTouches[0];
+      const now = Date.now();
+      const last = lastTapRef.current;
+      if (
+        last &&
+        now - last.t < 280 &&
+        Math.hypot(t.clientX - last.x, t.clientY - last.y) < 36
+      ) {
+        lastTapRef.current = null;
+        setZoom((z) => {
+          if (z >= 1 - 1e-3) {
+            setPosition({ x: 0, y: 0 });
+            return fitScaleRef.current;
+          }
+          setPosition({ x: 0, y: 0 });
+          return 1;
+        });
+      } else {
+        lastTapRef.current = { t: now, x: t.clientX, y: t.clientY };
+      }
+    }
   };
 
-  // Double-click: toggle between fit-to-screen and native resolution (1:1 pixels)
+  // Double-click / double-tap: toggle fit ↔ full
   const handleDoubleClick = () => {
     if (!naturalSize) return;
     const fs = fitScaleRef.current;
+    if (Math.abs(1 - fs) < 1e-6) return;
     if (zoom >= 1 - 1e-3) {
-      setZoom(fs);
-      setPosition({ x: 0, y: 0 });
+      setViewFit();
     } else {
-      setZoom(1);
-      setPosition({ x: 0, y: 0 });
+      setViewFull();
     }
   };
 
@@ -394,29 +455,79 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
 
       {/* Lightbox with Zoom */}
       {showLightbox && (
-        <div 
-          className="lightbox" 
-          onClick={(e) => {
-            // Only close if clicking the background, not the image or controls
-            if (e.target === e.currentTarget) {
-              setShowLightbox(false);
-            }
-          }}
-        >
-          <button 
-            className="lightbox-close" 
+        <div className="lightbox">
+          <button
+            type="button"
+            className="lightbox-backdrop"
+            aria-label="Close gallery view"
+            onClick={() => setShowLightbox(false)}
+          />
+          <div className="lightbox-stage">
+            {/* Zoomable Image — only flex child so centering is stable on mobile */}
+            <div
+              ref={lightboxImageRef}
+              className={`lightbox-image-container ${isDragging ? 'dragging' : ''} ${canPan ? 'zoomed' : ''}`}
+              onClick={(e) => e.stopPropagation()}
+              onWheel={handleWheel}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onDoubleClick={handleDoubleClick}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
+              style={{
+                transform: naturalSize
+                  ? `translate(${position.x}px, ${position.y}px) scale(${zoom})`
+                  : undefined,
+                cursor: naturalSize
+                  ? canPan
+                    ? isDragging
+                      ? 'grabbing'
+                      : 'grab'
+                    : 'zoom-in'
+                  : 'wait',
+                opacity: naturalSize ? 1 : 0,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                key={imageKey}
+                ref={imageRef}
+                src={images[currentImageIndex].image_url}
+                alt={artwork.title}
+                className="lightbox-image"
+                onLoad={handleImageLoad}
+                style={
+                  naturalSize
+                    ? {
+                        width: naturalSize.w,
+                        height: naturalSize.h,
+                        pointerEvents: 'none',
+                      }
+                    : { pointerEvents: 'none' }
+                }
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="lightbox-close"
             onClick={() => setShowLightbox(false)}
             aria-label="Close lightbox"
           >
             ×
           </button>
 
-          {/* Thumbnail Indicators */}
           {images.length > 1 && (
             <div className="lightbox-thumbnails">
               {images.map((img, i) => (
                 <button
                   key={i}
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setCurrentImageIndex(i);
@@ -431,42 +542,36 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
             </div>
           )}
 
-          {/* Zoom Controls */}
-          <div className="lightbox-zoom-controls">
-            <button 
-              onClick={handleZoomIn}
-              disabled={!naturalSize || zoom >= 1 - 1e-6}
-              className="lightbox-zoom-button"
-              title="Zoom in (up to full resolution)"
-              aria-label="Zoom in"
+          <div className="lightbox-view-controls" role="group" aria-label="Image view size">
+            <button
+              type="button"
+              className={`lightbox-view-btn${atFit ? ' lightbox-view-btn--active' : ''}`}
+              onClick={() => naturalSize && setViewFit()}
+              disabled={!naturalSize}
+              aria-pressed={atFit}
             >
-              <ZoomIn size={20} />
+              Fit screen
             </button>
-            <span className="lightbox-zoom-level">{Math.round(zoom * 100)}%</span>
-            <button 
-              onClick={handleZoomOut}
-              disabled={!naturalSize || zoom <= fitScale + 1e-6}
-              className="lightbox-zoom-button"
-              title="Zoom out (down to fit screen)"
-              aria-label="Zoom out"
+            <button
+              type="button"
+              className={`lightbox-view-btn${atFull && fullSizeAvailable ? ' lightbox-view-btn--active' : ''}`}
+              onClick={() => naturalSize && fullSizeAvailable && setViewFull()}
+              disabled={!naturalSize || !fullSizeAvailable}
+              aria-pressed={atFull && fullSizeAvailable}
+              title={
+                !fullSizeAvailable
+                  ? 'Already at full resolution for this screen'
+                  : 'Actual image pixels (pan to move)'
+              }
             >
-              <ZoomOut size={20} />
-            </button>
-            <button 
-              onClick={handleResetZoom}
-              disabled={!naturalSize || Math.abs(zoom - fitScale) < 1e-6}
-              className="lightbox-zoom-button"
-              title="Fit image to screen"
-              aria-label="Fit to screen"
-            >
-              <Maximize2 size={20} />
+              Full size
             </button>
           </div>
 
-          {/* Image Navigation Arrows */}
           {images.length > 1 && (
             <>
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (currentImageIndex > 0) {
@@ -481,6 +586,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                 ‹
               </button>
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (currentImageIndex < images.length - 1) {
@@ -496,54 +602,6 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
               </button>
             </>
           )}
-
-          {/* Zoomable Image */}
-          <div
-            ref={lightboxImageRef}
-            className={`lightbox-image-container ${isDragging ? 'dragging' : ''} ${canPan ? 'zoomed' : ''}`}
-            onWheel={handleWheel}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onDoubleClick={handleDoubleClick}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onTouchCancel={handleTouchEnd}
-            style={{
-              transform: naturalSize
-                ? `translate(${position.x}px, ${position.y}px) scale(${zoom})`
-                : undefined,
-              cursor: naturalSize
-                ? canPan
-                  ? isDragging
-                    ? 'grabbing'
-                    : 'grab'
-                  : 'zoom-in'
-                : 'wait',
-              opacity: naturalSize ? 1 : 0,
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              key={imageKey}
-              ref={imageRef}
-              src={images[currentImageIndex].image_url}
-              alt={artwork.title}
-              className="lightbox-image"
-              onLoad={handleImageLoad}
-              style={
-                naturalSize
-                  ? {
-                      width: naturalSize.w,
-                      height: naturalSize.h,
-                      pointerEvents: 'none',
-                    }
-                  : { pointerEvents: 'none' }
-              }
-            />
-          </div>
         </div>
       )}
 

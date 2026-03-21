@@ -4373,10 +4373,39 @@ img {
   inset: 0;
   background: rgba(0, 0, 0, 0.95);
   z-index: 9999;
+  overflow: hidden;
+}
+
+.lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Full-viewport flex center — avoids mobile bugs with one huge flex child + transform scale */
+.lightbox-stage {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  z-index: 2;
+  min-width: 0;
+  min-height: 0;
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: border-box;
+  /* Let taps outside the (transformed) image hit .lightbox for close — layout box is full intrinsic size */
+  pointer-events: none;
+  direction: ltr;
 }
 
 .lightbox-close {
@@ -4450,54 +4479,52 @@ img {
   object-fit: cover;
 }
 
-/* Lightbox Zoom Controls */
-.lightbox-zoom-controls {
+/* Lightbox: Fit screen vs Full size (two modes only) */
+.lightbox-view-controls {
   position: absolute;
   bottom: 2rem;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  padding: 0.75rem 1rem;
-  border-radius: 50px;
+  align-items: stretch;
+  gap: 0;
+  max-width: calc(100vw - 2rem);
+  background: rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 4px;
+  border-radius: 12px;
   z-index: 10002;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.lightbox-zoom-button {
-  background: rgba(255, 255, 255, 0.15);
+.lightbox-view-btn {
   border: none;
-  color: white;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  padding: 0.65rem 1.2rem;
+  border-radius: 9px;
   cursor: pointer;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.lightbox-zoom-button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.25);
-  transform: scale(1.05);
+.lightbox-view-btn:hover:not(:disabled) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.lightbox-zoom-button:disabled {
-  opacity: 0.3;
+.lightbox-view-btn:disabled {
+  opacity: 0.38;
   cursor: not-allowed;
 }
 
-.lightbox-zoom-level {
-  color: white;
-  font-size: 0.875rem;
-  font-weight: 600;
-  min-width: 3.5rem;
-  text-align: center;
-  user-select: none;
+.lightbox-view-btn--active {
+  background: rgba(255, 255, 255, 0.24);
+  color: #fff;
 }
 
 /* Lightbox Navigation Arrows */
@@ -4552,12 +4579,14 @@ img {
   height: max-content;
   max-width: none;
   max-height: none;
+  flex-shrink: 0;
   transition: transform 0.1s ease-out;
   transform-origin: center center;
   touch-action: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   user-select: none;
+  pointer-events: auto;
 }
 
 .lightbox-image-container.zoomed {
@@ -4591,14 +4620,16 @@ img {
     height: 50px;
   }
 
-  .lightbox-zoom-controls {
-    bottom: 1rem;
-    padding: 0.5rem 0.75rem;
+  .lightbox-view-controls {
+    bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    padding: 3px;
+    max-width: calc(100vw - 1.5rem);
   }
 
-  .lightbox-zoom-button {
-    width: 2rem;
-    height: 2rem;
+  .lightbox-view-btn {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.55rem 0.9rem;
   }
 
   .lightbox-arrow {
@@ -4621,12 +4652,6 @@ img {
     width: 2.5rem;
     height: 2.5rem;
     font-size: 1.75rem;
-  }
-
-  .lightbox-image-container {
-    max-width: 95vw;
-    max-height: 85vh;
-    height: 85vh;
   }
 }
 
