@@ -1,28 +1,11 @@
 'use client';
 
-import { usePathname, useSearchParams } from 'next/navigation';
+import NavLink from './NavLink';
 
 export default function NavLinks() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const isHome = pathname === '/' && !searchParams.get('gallery');
-
-  const handleClick = (e: React.MouseEvent) => {
-    if (isHome) {
-      e.preventDefault();
-      return;
-    }
-  };
-
   return (
     <div className="nav-links-group">
-      <a
-        href="/"
-        className={`nav-link ${pathname === '/' ? 'active' : ''}`}
-        onClick={handleClick}
-      >
-        Home
-      </a>
+      <NavLink href="/">Home</NavLink>
     </div>
   );
 }
