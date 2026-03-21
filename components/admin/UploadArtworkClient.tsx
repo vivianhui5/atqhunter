@@ -424,15 +424,10 @@ export default function UploadArtworkClient() {
                         type="button"
                         className="admin-primary-button"
                         style={{ padding: '0.45rem 0.85rem', fontSize: '0.8125rem' }}
+                        disabled={newGalleryPwDraft.trim().length < 3}
                         onClick={() => {
-                          const t = newGalleryPwDraft.trim();
-                          if (t.length < 3) {
-                            showToast('Gallery password must be at least 3 characters', 'error');
-                            return;
-                          }
-                          setNewGalleryPwApplied(t);
+                          setNewGalleryPwApplied(newGalleryPwDraft.trim());
                           setNewGalleryPwDraft('');
-                          showToast('Gallery password will be saved when you create', 'success');
                         }}
                       >
                         Set password
@@ -446,7 +441,6 @@ export default function UploadArtworkClient() {
                           onClick={() => {
                             setNewGalleryPwApplied(null);
                             setNewGalleryPwDraft('');
-                            showToast('Gallery password cleared', 'info');
                           }}
                         >
                           Clear password
@@ -456,8 +450,12 @@ export default function UploadArtworkClient() {
 
                     <p style={{ fontSize: '0.75rem', color: '#78716c', marginTop: '0.5rem', margin: 0 }}>
                       {newGalleryPwApplied
-                        ? 'This gallery will be created with a password.'
-                        : 'Leave empty (or don’t click Set) for no password protection.'}
+                        ? `You have set "${newGalleryPwApplied}" as the gallery password.`
+                        : newGalleryPwDraft.trim().length > 0 && newGalleryPwDraft.trim().length < 3
+                          ? 'Password must be at least 3 characters.'
+                          : newGalleryPwDraft.trim().length >= 3
+                            ? 'Click Set password to apply.'
+                            : 'Type a password and click Set password. Nothing is saved until you click it.'}
                     </p>
                   </div>
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
@@ -635,13 +633,6 @@ export default function UploadArtworkClient() {
           {/* Password Protection */}
           <div className="admin-form-section">
             <label htmlFor="password" className="admin-form-label">Password (optional)</label>
-            <p className="admin-form-help-text" style={{ marginBottom: '0.5rem' }}>
-              {postPasswordApplied
-                ? 'A password will be saved with this post. Click Clear to remove it.'
-                : selectedGallery && isGalleryProtected
-                  ? 'This post inherits the gallery password unless you set its own.'
-                  : 'Optional: type a password, then click Set password.'}
-            </p>
 
             <div style={{ position: 'relative' }}>
               <input
@@ -681,15 +672,10 @@ export default function UploadArtworkClient() {
                 type="button"
                 className="admin-primary-button"
                 style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                disabled={passwordDraft.trim().length < 3}
                 onClick={() => {
-                  const t = passwordDraft.trim();
-                  if (t.length < 3) {
-                    showToast('Password must be at least 3 characters', 'error');
-                    return;
-                  }
-                  setPostPasswordApplied(t);
+                  setPostPasswordApplied(passwordDraft.trim());
                   setPasswordDraft('');
-                  showToast('Password will be saved with this post when you submit', 'success');
                 }}
               >
                 Set password
@@ -702,13 +688,24 @@ export default function UploadArtworkClient() {
                   onClick={() => {
                     setPostPasswordApplied(null);
                     setPasswordDraft('');
-                    showToast('Post password cleared', 'info');
                   }}
                 >
                   Clear password
                 </button>
               )}
             </div>
+
+            <p className="admin-form-help-text" style={{ marginTop: '0.5rem' }}>
+              {postPasswordApplied
+                ? `You have set "${postPasswordApplied}" as the password. It will be saved when you submit.`
+                : passwordDraft.trim().length > 0 && passwordDraft.trim().length < 3
+                  ? 'Password must be at least 3 characters.'
+                  : passwordDraft.trim().length >= 3
+                    ? 'Click Set password to apply.'
+                    : selectedGallery && isGalleryProtected
+                      ? 'This post inherits the gallery password unless you set its own.'
+                      : 'Type a password and click Set password. Nothing is saved until you click it.'}
+            </p>
           </div>
 
           {/* Submit */}

@@ -727,17 +727,6 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
           {/* Password Protection — draft is not saved until you click “Set password” */}
           <div className="admin-form-section">
             <label htmlFor="password" className="admin-form-label">Password (optional)</label>
-            <p className="admin-form-help-text" style={{ marginBottom: '0.5rem' }}>
-              {passwordIntent === 'remove'
-                ? 'Password will be removed when you update this post.'
-                : passwordIntent === 'set' && passwordNewValue
-                  ? 'A new password will be saved when you update this post.'
-                  : hasServerPassword
-                    ? 'This post has a password. Type a new one and click Set password to change it, or remove it below.'
-                    : selectedGallery && isGalleryProtected
-                      ? 'This post inherits the gallery password unless you set its own here.'
-                      : 'Optional password for this post only.'}
-            </p>
             <div style={{ position: 'relative' }}>
               <input
                 id="password"
@@ -776,16 +765,11 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
                 type="button"
                 className="admin-primary-button"
                 style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                disabled={passwordDraft.trim().length < 3}
                 onClick={() => {
-                  const t = passwordDraft.trim();
-                  if (t.length < 3) {
-                    showToast('Password must be at least 3 characters', 'error');
-                    return;
-                  }
-                  setPasswordNewValue(t);
+                  setPasswordNewValue(passwordDraft.trim());
                   setPasswordIntent('set');
                   setPasswordDraft('');
-                  showToast('Password will be saved when you update the post', 'success');
                 }}
               >
                 Set password
@@ -799,7 +783,6 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
                     setPasswordIntent('remove');
                     setPasswordNewValue(null);
                     setPasswordDraft('');
-                    showToast('Password will be removed when you update the post', 'info');
                   }}
                 >
                   Remove password
@@ -814,13 +797,28 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
                     setPasswordIntent('keep');
                     setPasswordNewValue(null);
                     setPasswordDraft('');
-                    showToast('Password change cancelled', 'info');
                   }}
                 >
-                  Undo password change
+                  Undo
                 </button>
               )}
             </div>
+
+            <p className="admin-form-help-text" style={{ marginTop: '0.5rem' }}>
+              {passwordIntent === 'remove'
+                ? 'Password will be removed when you update this post.'
+                : passwordIntent === 'set' && passwordNewValue
+                  ? `You have set "${passwordNewValue}" as the password. It will be saved when you update.`
+                  : passwordDraft.trim().length > 0 && passwordDraft.trim().length < 3
+                    ? 'Password must be at least 3 characters.'
+                    : passwordDraft.trim().length >= 3
+                      ? 'Click Set password to apply.'
+                      : hasServerPassword
+                        ? 'This post currently has a password set.'
+                        : selectedGallery && isGalleryProtected
+                          ? 'This post inherits the gallery password unless you set its own.'
+                          : 'Type a password and click Set password. Nothing is saved until you click it.'}
+            </p>
           </div>
 
           {/* Submit */}

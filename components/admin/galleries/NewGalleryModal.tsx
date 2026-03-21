@@ -149,8 +149,12 @@ export default function NewGalleryModal({
 
             <p className="admin-form-help-text" style={{ marginTop: '0.5rem' }}>
               {passwordApplied
-                ? 'Password will be applied when you create the gallery.'
-                : 'If you type here but don’t click Set password, nothing will be applied.'}
+                ? `You have set "${passwordApplied}" as the gallery password.`
+                : passwordDraft.trim().length > 0 && passwordDraft.trim().length < 3
+                  ? 'Password must be at least 3 characters.'
+                  : passwordDraft.trim().length >= 3
+                    ? 'Click Set password to apply.'
+                    : 'Type a password and click Set password. Nothing is saved until you click it.'}
             </p>
           </div>
 
