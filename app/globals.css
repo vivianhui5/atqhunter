@@ -73,6 +73,9 @@
   transition: all 0.2s;
   position: relative;
   padding: 0.5rem 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .nav-link:hover {
@@ -93,6 +96,12 @@
   height: 2px;
   background: #1c1917;
   border-radius: 2px;
+}
+
+/* Nav loading spinner */
+.nav-loading-spinner {
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
 }
 
 /* Sign In Button */
@@ -451,54 +460,7 @@
 }
 
 /* Gallery Breadcrumbs */
-.gallery-breadcrumbs {
-  margin-bottom: 2rem;
-}
-
-.gallery-breadcrumbs-list {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.gallery-breadcrumb-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.gallery-breadcrumb-separator {
-  color: #a8a29e;
-  flex-shrink: 0;
-}
-
-.gallery-breadcrumb-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.875rem;
-  color: #78716c;
-  text-decoration: none;
-  transition: color 0.2s;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-}
-
-.gallery-breadcrumb-link:hover {
-  color: #1c1917;
-  background: #f5f5f4;
-}
-
-.gallery-breadcrumb-current {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #1c1917;
-  padding: 0.25rem 0.5rem;
-}
+/* Gallery breadcrumb styles removed — now uses unified .back-button */
 
 /* Gallery Header */
 .gallery-detail-header {
@@ -638,15 +600,6 @@
 
   .section-meta {
     margin-bottom: 1.5rem;
-  }
-
-  .gallery-breadcrumbs {
-    margin-bottom: 1.5rem;
-  }
-
-  .gallery-breadcrumb-link,
-  .gallery-breadcrumb-current {
-    font-size: 0.8125rem;
   }
 
   .section-subtitle {
@@ -4117,16 +4070,24 @@ img {
   padding: 2rem 1rem;
 }
 
-.breadcrumb {
-  display: inline-block;
-  color: #78716c;
-  font-size: 0.875rem;
-  margin-bottom: 2rem;
-  transition: color 0.2s;
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #57534e;
+  font-size: 1.125rem;
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  background: rgba(120, 113, 108, 0.08);
+  text-decoration: none;
+  transition: color 0.2s, background 0.2s;
 }
 
-.breadcrumb:hover {
+.back-button:hover {
   color: #1c1917;
+  background: rgba(120, 113, 108, 0.15);
 }
 
 /* Main Layout */
@@ -4492,8 +4453,8 @@ img {
   background: rgba(0, 0, 0, 0.58);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  padding: 4px;
-  border-radius: 12px;
+  padding: 5px;
+  border-radius: 16px;
   z-index: 10002;
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
@@ -4502,10 +4463,10 @@ img {
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.88);
-  font-size: 0.9375rem;
+  font-size: 1.625rem;
   font-weight: 600;
-  padding: 0.65rem 1.2rem;
-  border-radius: 9px;
+  padding: 1.1rem 2.1rem;
+  border-radius: 12px;
   cursor: pointer;
   white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
@@ -4627,9 +4588,9 @@ img {
   }
 
   .lightbox-view-btn {
-    font-size: 0.8125rem;
+    font-size: 1.4rem;
     font-weight: 600;
-    padding: 0.55rem 0.9rem;
+    padding: 0.95rem 1.55rem;
   }
 
   .lightbox-arrow {

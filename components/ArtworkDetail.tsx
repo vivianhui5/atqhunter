@@ -313,23 +313,13 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
   return (
     <div className="artwork-detail-page">
       <div className="artwork-container">
-      {/* Breadcrumb */}
-        {(() => {
-          // Determine back link: gallery if exists, otherwise home
-          let backHref = '/';
-          let backText = '← Back to Collection';
-          
-          if (artwork.gallery) {
-            backHref = `/`;
-            backText = `← Back to Collection`;
-          }
-          
-          return (
-            <Link href={backHref} className="breadcrumb">
-              {backText}
+      {/* Back — go up one level */}
+        <Link
+          href={artwork.gallery ? `/?gallery=${artwork.gallery.id}` : '/'}
+          className="back-button"
+        >
+          {artwork.gallery ? `← ${artwork.gallery.name}` : '← Full Collection'}
         </Link>
-          );
-        })()}
 
         {/* Main Layout */}
         <div className="artwork-layout">
@@ -550,7 +540,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
               disabled={!naturalSize}
               aria-pressed={atFit}
             >
-              Fit screen
+              Fit Screen/ 屏幕大小
             </button>
             <button
               type="button"
@@ -564,7 +554,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
                   : 'Actual image pixels (pan to move)'
               }
             >
-              Full size
+              Full Size/ 放大原图
             </button>
           </div>
 

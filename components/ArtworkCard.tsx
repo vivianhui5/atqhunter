@@ -225,8 +225,8 @@ export default function ArtworkCard({ artwork, allGalleries = [], parentUnlocked
         <div className="artwork-card-gallery-wrapper">
           <span className="gallery-label">From Gallery:</span>{' '}
       {artwork.gallery ? (
-        <Link 
-          href="/"
+        <Link
+          href={`/?gallery=${artwork.gallery.id}`}
               className="artwork-card-gallery-link"
         >
               {artwork.gallery.name}
