@@ -318,7 +318,7 @@ export default function ArtworkDetail({ artwork }: { artwork: ArtworkPost }) {
           href={artwork.gallery ? `/?gallery=${artwork.gallery.id}` : '/'}
           className="back-button"
         >
-          {artwork.gallery ? `← ${artwork.gallery.name}` : '← Full Collection'}
+          {artwork.gallery ? `← ${artwork.gallery.name}` : '← Home/主页'}
         </Link>
 
         {/* Main Layout */}
