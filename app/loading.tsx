@@ -1,9 +1,39 @@
 export default function Loading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-50">
-      <div className="text-center">
-        <div className="w-12 h-12 border border-stone-300 border-t-stone-900 rounded-full animate-spin mx-auto mb-6" />
-        <p className="text-stone-400 text-sm tracking-widest uppercase">Loading</p>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#FAFAF9',
+        zIndex: 9000,
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            border: '2px solid #d6d3d1',
+            borderTopColor: '#1c1917',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+            margin: '0 auto 1.5rem',
+          }}
+        />
+        <p
+          style={{
+            color: '#a8a29e',
+            fontSize: '0.875rem',
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
+            margin: 0,
+          }}
+        >
+          Loading
+        </p>
       </div>
     </div>
   );

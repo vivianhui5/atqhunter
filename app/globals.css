@@ -4584,13 +4584,15 @@ img {
   .lightbox-view-controls {
     bottom: max(1rem, env(safe-area-inset-bottom, 0px));
     padding: 3px;
-    max-width: calc(100vw - 1.5rem);
+    max-width: calc(100vw - 1rem);
+    border-radius: 10px;
   }
 
   .lightbox-view-btn {
-    font-size: 1.4rem;
+    font-size: 0.85rem;
     font-weight: 600;
-    padding: 0.95rem 1.55rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: 8px;
   }
 
   .lightbox-arrow {
