@@ -8,6 +8,7 @@ import HomeClient from '@/components/home/HomeClient';
 import ContactUsButton from '@/components/ContactUsButton';
 import ProtectedGalleryContent from '@/components/galleries/ProtectedGalleryContent';
 import { redirect } from 'next/navigation';
+import { after } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -231,7 +232,7 @@ async function getAllGalleries(): Promise<Gallery[]> {
 async function getGalleryById(galleryId: string, allGalleries: Gallery[]): Promise<Gallery | null> {
   const { data, error } = await supabaseAdmin
     .from('galleries')
-    .select('id, name, parent_id, password, cover_image_url, display_order, created_at')
+    .select('id, name, parent_id, password, cover_image_url, display_order, view_count, created_at')
     .eq('id', galleryId)
     .single();
 
@@ -247,6 +248,7 @@ async function getGalleryById(galleryId: string, allGalleries: Gallery[]): Promi
     ...data,
     password: null,
     display_order: data.display_order ?? null,
+    view_count: data.view_count ?? 0,
     password_protected: Boolean(isPasswordProtected),
     hasOwnPassword: Boolean(hasOwnPassword),
   } as Gallery;
@@ -423,6 +425,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     if (!gallery) {
       // Gallery not found, show home page
       return redirect('/');
+    }
+
+    if (!adminView) {
+      after(async () => {
+        const { error } = await supabaseAdmin.rpc('increment_gallery_view_count', {
+          gallery_id: galleryId,
+        });
+        if (error) {
+          console.error('increment_gallery_view_count:', error);
+        }
+      });
     }
 
     const childGalleries = await getChildGalleries(galleryId);

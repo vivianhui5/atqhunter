@@ -1910,9 +1910,17 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.625rem;
   overflow: hidden;
   min-height: 0;
+}
+
+/* Title + From Gallery grouped so the chip is never pushed down by the description */
+.admin-artwork-card-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .admin-artwork-title {
@@ -1920,22 +1928,23 @@
   font-weight: 600;
   color: #1c1917;
   margin: 0;
-  margin-bottom: 0.5rem;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
-  line-height: 1.4;
+  line-height: 1.35;
   flex-shrink: 0;
+  /* Avoid some WebKit builds reserving a full second line when only one line is used */
+  max-height: calc(1.35em * 2);
 }
 
 .admin-artwork-description {
   font-size: 0.875rem;
   color: #78716c;
   line-height: 1.5;
-  margin-bottom: 0.75rem;
+  margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -1956,14 +1965,19 @@
 
 .admin-artwork-gallery-label {
   font-size: 0.8125rem;
-  color: #78716c;
-  margin-top: auto;
-  line-height: 1.4;
+  color: #57534e;
+  margin: 0;
+  line-height: 1.45;
+  padding: 0.5rem 0.75rem;
+  background: #f5f5f4;
+  border-radius: 8px;
+  border: 1px solid #e7e5e4;
+  flex-shrink: 0;
 }
 
 .gallery-label-text {
   font-weight: 600;
-  color: #57534e;
+  color: #44403c;
 }
 
 .admin-artwork-actions-overlay {
@@ -2807,6 +2821,17 @@
 }
 
 /* Editable Gallery Title Styles */
+.admin-gallery-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-gallery-title-block .admin-editable-title {
+  margin-bottom: 0;
+}
+
 .admin-editable-title {
   display: flex;
   align-items: center;
@@ -3441,6 +3466,34 @@
   font-weight: 700;
   color: #1c1917;
   letter-spacing: -0.02em;
+}
+
+.admin-artwork-view-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding: 0.625rem 1rem;
+  background: #fafaf9;
+  border: 1px solid #e7e5e4;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: #44403c;
+}
+
+.admin-artwork-view-stats-icon {
+  color: #78716c;
+  flex-shrink: 0;
+}
+
+.admin-artwork-view-stats-value {
+  font-weight: 600;
+  color: #1c1917;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-artwork-view-stats-label {
+  color: #78716c;
 }
 
 .admin-form-section {

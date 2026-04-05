@@ -235,8 +235,25 @@ export default function AdminGalleryCard({
                   {artworkCount} {artworkCount === 1 ? 'post' : 'posts'}
                 </span>
               )}
+              {(subfolderCount > 0 || artworkCount > 0) &&
+                typeof gallery.view_count === 'number' && (
+                  <>
+                    <span className="admin-gallery-card-meta-separator">•</span>
+                    <span className="admin-gallery-card-meta-item" title="Public folder page views">
+                      {(gallery.view_count ?? 0).toLocaleString()} views
+                    </span>
+                  </>
+                )}
               {subfolderCount === 0 && artworkCount === 0 && (
-                <span className="admin-gallery-card-meta-empty">Empty</span>
+                <>
+                  {typeof gallery.view_count === 'number' && (gallery.view_count ?? 0) > 0 ? (
+                    <span className="admin-gallery-card-meta-item" title="Public folder page views">
+                      {(gallery.view_count ?? 0).toLocaleString()} views
+                    </span>
+                  ) : (
+                    <span className="admin-gallery-card-meta-empty">Empty</span>
+                  )}
+                </>
               )}
             </div>
           </>

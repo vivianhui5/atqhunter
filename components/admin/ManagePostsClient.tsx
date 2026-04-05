@@ -517,6 +517,9 @@ export default function ManagePostsClient() {
               onEditCoverImage={handleEditCoverImage}
               currentCoverImage={currentGallery.cover_image_url || null}
               availableImages={allImages}
+              pageViewCount={
+                typeof currentGallery.view_count === 'number' ? currentGallery.view_count : 0
+              }
             />
           );
         })()}

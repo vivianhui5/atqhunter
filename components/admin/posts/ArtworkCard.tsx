@@ -74,18 +74,20 @@ export default function ArtworkCard({ artwork, onDelete, onManagePassword, dragg
         </div>
       </div>
 
-      {/* Info */}
+      {/* Info: gallery line sits directly under title so spacing is consistent */}
       <div className="admin-artwork-info">
-        <h3 className="admin-artwork-title">{artwork.title}</h3>
+        <div className="admin-artwork-card-heading">
+          <h3 className="admin-artwork-title">{artwork.title}</h3>
+          {artwork.gallery && (
+            <p className="admin-artwork-gallery-label">
+              <span className="gallery-label-text">From Gallery:</span> {artwork.gallery.name}
+            </p>
+          )}
+        </div>
         {artwork.description && (
           <p className="admin-artwork-description">
             {stripHtml(artwork.description).slice(0, 100)}
             {stripHtml(artwork.description).length > 100 ? '...' : ''}
-          </p>
-        )}
-        {artwork.gallery && (
-          <p className="admin-artwork-gallery-label">
-            <span className="gallery-label-text">From Gallery:</span> {artwork.gallery.name}
           </p>
         )}
       </div>

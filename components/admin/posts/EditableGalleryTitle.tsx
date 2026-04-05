@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Edit2, Check, X, Image as ImageIcon } from 'lucide-react';
+import { Edit2, Check, X, Image as ImageIcon, Eye } from 'lucide-react';
 
 interface EditableGalleryTitleProps {
   name: string;
@@ -10,6 +10,8 @@ interface EditableGalleryTitleProps {
   onEditCoverImage?: (id: string, name: string, currentCoverImage: string | null, availableImages: string[]) => void;
   currentCoverImage?: string | null;
   availableImages?: string[];
+  /** Public folder page views (`/?gallery=id`); shown under the title when set. */
+  pageViewCount?: number;
 }
 
 export default function EditableGalleryTitle({ 
@@ -18,7 +20,8 @@ export default function EditableGalleryTitle({
   onUpdate, 
   onEditCoverImage,
   currentCoverImage,
-  availableImages = []
+  availableImages = [],
+  pageViewCount,
 }: EditableGalleryTitleProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(name);
@@ -47,65 +50,80 @@ export default function EditableGalleryTitle({
     setIsEditing(false);
   };
 
+  const viewStats =
+    pageViewCount !== undefined ? (
+      <div className="admin-artwork-view-stats" role="status" aria-live="polite">
+        <Eye size={18} className="admin-artwork-view-stats-icon" aria-hidden />
+        <span className="admin-artwork-view-stats-value">{pageViewCount.toLocaleString()}</span>
+        <span className="admin-artwork-view-stats-label">folder page views</span>
+      </div>
+    ) : null;
+
   if (isEditing) {
     return (
-      <div className="admin-editable-title">
-        <input
-          type="text"
-          value={editedName}
-          onChange={(e) => setEditedName(e.target.value)}
-          className="admin-editable-input"
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSave();
-            if (e.key === 'Escape') handleCancel();
-          }}
-          disabled={isUpdating}
-          aria-label="Gallery name"
-        />
-        <div className="admin-editable-actions">
-          <button
-            onClick={handleSave}
-            className="admin-editable-button save"
-            disabled={isUpdating || !editedName.trim() || editedName.trim() === name.trim()}
-            title="Save"
-          >
-            <Check size={16} />
-          </button>
-          <button
-            onClick={handleCancel}
-            className="admin-editable-button cancel"
+      <div className="admin-gallery-title-block">
+        <div className="admin-editable-title">
+          <input
+            type="text"
+            value={editedName}
+            onChange={(e) => setEditedName(e.target.value)}
+            className="admin-editable-input"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSave();
+              if (e.key === 'Escape') handleCancel();
+            }}
             disabled={isUpdating}
-            title="Cancel"
-          >
-            <X size={16} />
-          </button>
+            aria-label="Gallery name"
+          />
+          <div className="admin-editable-actions">
+            <button
+              onClick={handleSave}
+              className="admin-editable-button save"
+              disabled={isUpdating || !editedName.trim() || editedName.trim() === name.trim()}
+              title="Save"
+            >
+              <Check size={16} />
+            </button>
+            <button
+              onClick={handleCancel}
+              className="admin-editable-button cancel"
+              disabled={isUpdating}
+              title="Cancel"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
+        {viewStats}
       </div>
     );
   }
 
   return (
-    <div className="admin-editable-title">
-      <h2 className="admin-gallery-view-title">{name}</h2>
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        {onEditCoverImage && (
+    <div className="admin-gallery-title-block">
+      <div className="admin-editable-title">
+        <h2 className="admin-gallery-view-title">{name}</h2>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {onEditCoverImage && (
+            <button
+              onClick={() => onEditCoverImage(galleryId, name, currentCoverImage || null, availableImages)}
+              className="admin-editable-edit-button"
+              title="Edit cover image"
+            >
+              <ImageIcon size={18} />
+            </button>
+          )}
           <button
-            onClick={() => onEditCoverImage(galleryId, name, currentCoverImage || null, availableImages)}
+            onClick={() => setIsEditing(true)}
             className="admin-editable-edit-button"
-            title="Edit cover image"
+            title="Edit gallery name"
           >
-            <ImageIcon size={18} />
+            <Edit2 size={18} />
           </button>
-        )}
-        <button
-          onClick={() => setIsEditing(true)}
-          className="admin-editable-edit-button"
-          title="Edit gallery name"
-        >
-          <Edit2 size={18} />
-        </button>
+        </div>
       </div>
+      {viewStats}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import ProtectedArtworkContent from '@/components/ProtectedArtworkContent';
 import { Suspense } from 'react';
 import { isAdmin } from '@/lib/auth';
+import { after } from 'next/server';
 
 // Disable caching to show latest artwork data
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,7 @@ async function getArtwork(id: string): Promise<ArtworkPost | null> {
       price,
       gallery_id,
       display_order,
+      view_count,
       created_at,
       updated_at,
       gallery:galleries(id, name, parent_id, cover_image_url, display_order, created_at),
@@ -64,6 +66,7 @@ async function getArtwork(id: string): Promise<ArtworkPost | null> {
     ...data,
     password: null,
     display_order: data.display_order ?? null,
+    view_count: data.view_count ?? 0,
     gallery: galleryObj,
   };
 
@@ -103,6 +106,18 @@ export default async function ArtworkPage({
 
   if (!artwork) {
     notFound();
+  }
+
+  // Count public visits only (not admin preview / logged-in admin unless ?public=true)
+  if (!adminView) {
+    after(async () => {
+      const { error } = await supabaseAdmin.rpc('increment_artwork_view_count', {
+        artwork_id: id,
+      });
+      if (error) {
+        console.error('increment_artwork_view_count:', error);
+      }
+    });
   }
 
   return (

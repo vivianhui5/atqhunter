@@ -50,6 +50,7 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
   const [newGalleryName, setNewGalleryName] = useState('');
   const [creatingGallery, setCreatingGallery] = useState(false);
   const [isLoadingArtwork, setIsLoadingArtwork] = useState(true);
+  const [viewCount, setViewCount] = useState(0);
   const [existingImages, setExistingImages] = useState<ArtworkImage[]>([]);
   const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -103,6 +104,9 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
 
       const data = await res.json();
       setTitle(data.artwork.title);
+      setViewCount(
+        typeof data.artwork.view_count === 'number' ? data.artwork.view_count : 0
+      );
       setDescription(data.artwork.description || '');
       setPrice(data.artwork.price?.toString() || '');
       setSelectedGallery(data.artwork.gallery_id || '');
@@ -468,6 +472,11 @@ export default function EditArtworkClient({ artworkId }: EditArtworkClientProps)
             Back 
           </button>
           <h1 className="admin-form-page-title">Edit Artwork</h1>
+          <div className="admin-artwork-view-stats" role="status" aria-live="polite">
+            <Eye size={18} className="admin-artwork-view-stats-icon" aria-hidden />
+            <span className="admin-artwork-view-stats-value">{viewCount.toLocaleString()}</span>
+            <span className="admin-artwork-view-stats-label">page views</span>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit}>

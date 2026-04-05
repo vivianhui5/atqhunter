@@ -7,6 +7,8 @@ export interface Gallery {
   hasOwnPassword?: boolean;
   cover_image_url: string | null;
   display_order: number | null;
+  /** Public loads of `/?gallery=id` for this folder (any nesting depth). */
+  view_count?: number;
   created_at: string;
   children?: Gallery[];
   path?: string; // Full path like "Parent > Child > Grandchild"
@@ -22,6 +24,8 @@ export interface ArtworkPost {
   password_protected?: boolean;
   hasOwnPassword?: boolean;
   display_order: number | null;
+  /** Total public page loads of /artwork/[id] (excludes admin preview). */
+  view_count?: number;
   created_at: string;
   updated_at: string;
   gallery?: Gallery;
