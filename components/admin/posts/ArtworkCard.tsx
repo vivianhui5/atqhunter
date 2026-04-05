@@ -16,12 +16,6 @@ interface ArtworkCardProps {
 export default function ArtworkCard({ artwork, onDelete, onManagePassword, draggable = false, onDragStart }: ArtworkCardProps) {
   const router = useRouter();
   const firstImage = artwork.images?.sort((a, b) => a.display_order - b.display_order)[0];
-  
-  const stripHtml = (html: string) => {
-    const tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || '';
-  };
 
   const handleCardClick = () => {
     router.push(`/admin/${artwork.id}`);
@@ -74,22 +68,8 @@ export default function ArtworkCard({ artwork, onDelete, onManagePassword, dragg
         </div>
       </div>
 
-      {/* Info: gallery line sits directly under title so spacing is consistent */}
       <div className="admin-artwork-info">
-        <div className="admin-artwork-card-heading">
-          <h3 className="admin-artwork-title">{artwork.title}</h3>
-          {artwork.gallery && (
-            <p className="admin-artwork-gallery-label">
-              <span className="gallery-label-text">From Gallery:</span> {artwork.gallery.name}
-            </p>
-          )}
-        </div>
-        {artwork.description && (
-          <p className="admin-artwork-description">
-            {stripHtml(artwork.description).slice(0, 100)}
-            {stripHtml(artwork.description).length > 100 ? '...' : ''}
-          </p>
-        )}
+        <h3 className="admin-artwork-title">{artwork.title}</h3>
       </div>
     </div>
   );
